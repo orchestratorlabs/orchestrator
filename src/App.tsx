@@ -20,18 +20,26 @@ export function App() {
   const handleLoadSample = () => {
     setReactCode(SAMPLE_BUTTON_TSX);
     setCssCode(SAMPLE_BUTTON_CSS);
+    setSelectedFindingRuleId(null);
     setEvaluationStateMessage("Sample button loaded. Ready to evaluate.");
   };
 
   const handleEvaluate = () => {
+    const currentReactCode = reactCode;
+    const currentCssCode = cssCode;
     setIsEvaluating(true);
-    const result = evaluateButtonAccessibility(reactCode, cssCode);
-    setEvaluationResult(result);
     setSelectedFindingRuleId(null);
-    setEvaluationStateMessage(
-      `Evaluation complete: ${result.findings.filter((f) => f.status === "Pass").length} pass, ${result.unknownCount} unknown, ${result.findings.filter((f) => f.status === "Fail").length} fail.`
-    );
-    setIsEvaluating(false);
+    setEvaluationResult(null);
+    setEvaluationStateMessage("Running accessibility check on current workspace code...");
+
+    window.setTimeout(() => {
+      const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
+      setEvaluationResult(result);
+      setEvaluationStateMessage(
+        `Evaluation complete: ${result.findings.filter((f) => f.status === "Pass").length} pass, ${result.unknownCount} unknown, ${result.findings.filter((f) => f.status === "Fail").length} fail.`
+      );
+      setIsEvaluating(false);
+    }, 0);
   };
 
   return (
