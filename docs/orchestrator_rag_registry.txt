@@ -1,0 +1,244 @@
+========================================
+RAG REGISTRY HEADER
+========================================
+id: orchestrator_rag_registry_v3
+file_name: orchestrator_rag_registry.txt
+type: rag_registry
+title: OrchestratoR RAG Registry
+author: OpenAI for Craig Maher
+product: OrchestratoR
+version: 3.0
+language: English
+registry_purpose: Organize and route component-specific accessibility RAG files so an LLM can retrieve the correct grounding document for the correct UI component and evaluation context.
+
+========================================
+SOURCE-OF-TRUTH METADATA
+========================================
+primary_technical_source:
+- title: Web Content Accessibility Guidelines (WCAG) 2.1
+  organization: World Wide Web Consortium (W3C)
+  canonical_url: https://www.w3.org/TR/WCAG21/
+  document_status: W3C Recommendation
+  role: Primary technical source of truth for accessibility rules used in OrchestratoR
+  accessed_date: 2026-04-13
+
+supporting_policy_sources:
+- title: Fact Sheet: New Rule on the Accessibility of Web Content and Mobile Apps Provided by State and Local Governments
+  organization: ADA.gov / U.S. Department of Justice
+  canonical_url: https://www.ada.gov/resources/2024-03-08-web-rule/
+  scope: Title II state and local governments
+  role: Supporting policy and legal context showing official adoption of WCAG 2.1 Level AA in a U.S. government accessibility rule
+  publication_date: 2024-04-08
+  accessed_date: 2026-04-13
+
+- title: Guidance on Web Accessibility and the ADA
+  organization: U.S. Department of Justice
+  canonical_source_type: User-provided PDF
+  role: Supporting DOJ guidance reinforcing accessibility barriers, keyboard access, labels, and contrast
+  accessed_date: 2026-04-13
+
+========================================
+DESCRIPTION
+========================================
+This registry file acts as the master index for OrchestratoR accessibility RAG documents.
+
+It does not replace individual component RAG files.
+Instead, it tells the LLM:
+- which RAG file applies to which component
+- which file is the primary rule set
+- when a component-specific extension should be used
+- how component scoring should inherit or extend other scoring models
+
+This registry supports a scalable Retrieval-Augmented Generation workflow for accessibility health scoring across multiple UI components.
+
+========================================
+INTENDED USE
+========================================
+Use this registry before evaluating a UI component.
+
+Workflow:
+1. Identify the component type being evaluated
+2. Retrieve the matching component RAG file
+3. Apply the component-specific scoring and rule logic
+4. If a component extends another base component, preserve the base logic where applicable
+5. Return the accessibility health score, findings, severity, and recommended fixes
+
+========================================
+REGISTERED RAG FILES
+========================================
+
+Registry Entry 1
+Component Name:
+Button
+
+Component Type:
+Interactive control
+
+Primary RAG File:
+orchestrator_button_health_score_rag.txt
+
+RAG Role:
+Core component rule pack
+
+Primary Use Case:
+Evaluate a React button component for accessibility health score, findings, and recommended fixes.
+
+Input Expectations:
+- React button component code
+- visual states when available
+- token values when available
+- design system rules when available
+
+Base Rule Focus:
+- semantic button markup
+- accessible name
+- keyboard operability
+- visible focus indicator
+- text contrast
+- non-text contrast
+- target size
+- disabled state behavior
+- state coverage
+
+Scoring Relationship:
+This is a base scoring model and does not depend on another component RAG.
+
+When to Retrieve:
+- standalone button component
+- button element inside forms, dialogs, or cards
+- any UI where the primary subject of evaluation is a button
+
+Priority:
+High
+
+----------------------------------------
+
+Registry Entry 2
+Component Name:
+Card
+
+Component Type:
+Composite content container
+
+Primary RAG File:
+orchestrator_card_health_score_rag.txt
+
+RAG Role:
+Component extension and composite scoring rule pack
+
+Primary Use Case:
+Evaluate a Card UI component containing an image, text content, and a button or link.
+
+Input Expectations:
+- React Card component code
+- nested image, text, and button or link structure
+- visual states when available
+- token values when available
+- design system rules when available
+
+Base Rule Focus:
+- image text alternatives
+- content structure and relationships
+- readable text and contrast
+- keyboard access to nested interactive content
+- visible focus for nested controls
+- clear action labels
+- logical focus order
+- nested interaction conflict detection
+- preservation of button scoring where a nested button exists
+
+Scoring Relationship:
+This component extends the button RAG when the Card contains a nested button.
+Preserve relevant button accessibility scoring logic for the nested button.
+Add Card-specific rules and deductions for the overall Card component.
+
+Depends On:
+orchestrator_button_health_score_rag.txt
+
+When to Retrieve:
+- content card with CTA button
+- promotional card
+- product card
+- feature card
+- dashboard card with nested action
+- any Card component containing media, text, and an interactive control
+
+Priority:
+High
+
+========================================
+RETRIEVAL RULES
+========================================
+Use the Button RAG when:
+- the user submits a standalone button component
+- the evaluation target is specifically the button itself
+- the request focuses on button semantics, states, or interaction behavior
+
+Use the Card RAG when:
+- the user submits a Card component with nested content
+- the request concerns the accessibility of the full Card UI
+- the Card includes image, text, and button or other interactive children
+
+Use both Button and Card RAG files together when:
+- the Card contains a nested button that must also be independently evaluated
+- the overall Card score depends partly on the quality of the nested button implementation
+- a developer or engineer needs both component-level and nested-control findings
+
+========================================
+SCORING GOVERNANCE
+========================================
+Registry rule:
+A composite component may inherit relevant scoring logic from a base component RAG, but it must add its own component-specific rules rather than reusing the base score unchanged.
+
+Implication:
+- Button score alone is not sufficient for Card evaluation
+- Card score should reflect both container-level accessibility and nested control quality
+- Unknown evidence should remain Unknown rather than being assumed Pass
+
+========================================
+EXTENSIBILITY MODEL
+========================================
+Future component RAG files can be added to this registry using the same format.
+
+Examples:
+- orchestrator_input_health_score_rag.txt
+- orchestrator_modal_health_score_rag.txt
+- orchestrator_table_health_score_rag.txt
+- orchestrator_link_health_score_rag.txt
+
+Each new entry should define:
+- component name
+- component type
+- primary RAG file
+- role in the registry
+- use case
+- input expectations
+- scoring relationship
+- retrieval conditions
+- dependencies if any
+
+========================================
+LLM INSTRUCTION
+========================================
+When using this registry:
+1. Identify the component type first
+2. Retrieve the most specific matching RAG file
+3. Use dependency relationships when a component extends another component's logic
+4. Do not merge unrelated rule packs
+5. Do not invent requirements not supported by the selected RAG files
+6. If multiple RAG files apply, prioritize the more specific component RAG while preserving relevant base rules
+
+========================================
+SIMPLE EXPLANATION
+========================================
+The individual RAG files contain the rules.
+This registry tells OrchestratoR which rule file to use.
+
+Example:
+- Button request -> retrieve orchestrator_button_health_score_rag.txt
+- Card request -> retrieve orchestrator_card_health_score_rag.txt
+- Card with nested button -> retrieve Card rules first, then preserve relevant Button rules
+
+========================================
+END OF REGISTRY
+========================================
