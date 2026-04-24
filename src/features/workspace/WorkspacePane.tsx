@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { EvaluationResult, RuleResult } from "../orchestrator/types/evaluation";
+import { LiveButtonPreview } from "./LiveButtonPreview";
 
 const SAMPLE_TSX = `import React from "react";
 import "./MixedIconButton.css";
@@ -395,73 +396,6 @@ function scrollTextareaToLine(textarea: HTMLTextAreaElement, line: number) {
   textarea.scrollTo({ top: targetTop, behavior: "smooth" });
 }
 
-function buildPreviewMarkup(reactCode: string): string | null {
-  const buttonMatch = reactCode.match(/<button\b[\s\S]*?<\/button>/m);
-  if (!buttonMatch) {
-    return null;
-  }
-
-  return buttonMatch[0]
-    .replace(/\bclassName=/g, "class=")
-    .replace(/\s+onClick=\{[^}]*\}/g, "")
-    .replace(/\s+\w+=\{[^}]*\}/g, "");
-}
-
-function buildPreviewDocument(reactCode: string, cssCode: string): string {
-  const buttonMarkup = buildPreviewMarkup(reactCode);
-  const content = buttonMarkup
-    ? `<div class="preview-canvas">${buttonMarkup}</div>`
-    : '<div class="preview-empty">No renderable <button> found in current React editor content.</div>';
-
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      :root { color-scheme: dark; }
-      body {
-        margin: 0;
-        background: #0f141d;
-        color: #d6deeb;
-        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      }
-      .preview-canvas {
-        min-height: 120px;
-        padding: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-      }
-      .preview-empty {
-        min-height: 120px;
-        padding: 16px;
-        color: #9aa6ba;
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-      }
-      ${cssCode}
-    </style>
-  </head>
-  <body>
-    ${content}
-    <script>
-      (function () {
-        const previewButton = document.querySelector("button");
-        if (!previewButton) return;
-        if (!previewButton.getAttribute("type")) {
-          previewButton.setAttribute("type", "button");
-        }
-        previewButton.addEventListener("click", function (event) {
-          event.preventDefault();
-        });
-      })();
-    </script>
-  </body>
-</html>`;
-}
-
 export function WorkspacePane({
   reactCode,
   cssCode,
@@ -477,7 +411,6 @@ export function WorkspacePane({
     () => buildAnnotations(evaluationResult, reactCode, cssCode),
     [evaluationResult, reactCode, cssCode]
   );
-  const previewDocument = useMemo(() => buildPreviewDocument(reactCode, cssCode), [reactCode, cssCode]);
   const tsxAnnotations = annotations.filter((annotation) => annotation.target === "tsx");
   const cssAnnotations = annotations.filter((annotation) => annotation.target === "css");
   const selectedAnnotation = selectedFindingRuleId
@@ -529,14 +462,9 @@ export function WorkspacePane({
       <section className="editor-block preview-block">
         <div className="preview-header">
           <p className="preview-title">Live Component Preview</p>
-          <span className="muted">Hover directly, then click and press Tab for focus-visible</span>
+          <span className="muted">Tab from the editors to focus the Close button — hover and click work normally</span>
         </div>
-        <iframe
-          title="Live button component preview"
-          className="component-preview-frame"
-          srcDoc={previewDocument}
-          sandbox="allow-scripts"
-        />
+        <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} />
       </section>
 
       <div className="editor-stack">

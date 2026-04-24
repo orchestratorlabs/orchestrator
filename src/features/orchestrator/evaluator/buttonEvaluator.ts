@@ -49,8 +49,9 @@ const RULES: RuleDefinition[] = [
   },
   {
     ruleId: "rule-6-non-text-contrast",
-    ruleName: "Non-Text Contrast",
-    sourceReference: "orchestrator_button_health_score_rag.txt Rule 6",
+    ruleName: "Focus Indicator Contrast",
+    sourceReference:
+      "WCAG 1.4.11 Non-text Contrast (AA) · orchestrator_button_health_score_rag.txt Rule 6",
     defaultSeverity: "Medium",
     deduction: 10
   },

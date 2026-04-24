@@ -186,12 +186,13 @@ body {
   font-weight: 600;
 }
 
-.component-preview-frame {
+.live-button-preview-host {
   width: 100%;
-  height: 140px;
+  min-height: 160px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #0f141d;
+  overflow: visible;
 }
 
 .editor-block {
