@@ -31,7 +31,7 @@ export function OrchestratorPanel({
       <div className="panel-header">
         <img src={orchestratorLogo} alt="" className="panel-logo" aria-hidden="true" />
         <div className="panel-brand-copy">
-          <h2>Orchestrator - Your Accessibility Co-pilot</h2>
+          <h2>OrchestratoR<sup>™</sup> - Your Accessibility Co-pilot</h2>
           <p>Detect. Fix. Ship.</p>
         </div>
       </div>

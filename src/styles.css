@@ -401,6 +401,13 @@ body {
   font-weight: 600;
 }
 
+.panel-header h2 sup {
+  font-size: 0.6em;
+  vertical-align: super;
+  line-height: 0;
+  font-weight: 400;
+}
+
 .panel-header p {
   margin: 0;
   color: var(--muted);
