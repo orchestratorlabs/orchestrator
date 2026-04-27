@@ -254,6 +254,14 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
         "Native button semantics provide keyboard focus and Enter/Space activation behavior by default."
       )
     );
+  } else if (reactCode.match(/<(div|span)\b[\s\S]*onClick=/m)) {
+    findings.push(
+      createFail(
+        RULES[2],
+        "Detected clickable non-semantic element (div/span with onClick). Keyboard operability is not guaranteed without native button semantics.",
+        "Use a native <button type=\"button\"> to ensure keyboard focus and Enter/Space activation."
+      )
+    );
   } else {
     findings.push(
       createUnknown(
