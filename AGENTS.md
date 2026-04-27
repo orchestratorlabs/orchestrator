@@ -32,6 +32,18 @@ The AI must:
 
 If a rule cannot be verified from the available evidence, the AI must return **Unknown** instead of guessing.
 
+## Documentation Files
+
+| File | Role |
+|---|---|
+| [docs/orchestrator_rag_registry.txt](docs/orchestrator_rag_registry.txt) | Registry/index that maps component types to their RAG files. Route evaluation requests through this file to find the correct grounding document. |
+| [docs/orchestrator_button_health_score_rag.txt](docs/orchestrator_button_health_score_rag.txt) | Component-specific rule source of truth for React button accessibility evaluation. Primary grounding document for the MVP evaluator. |
+| [docs/mvp_scoring_policy.md](docs/mvp_scoring_policy.md) | Scoring formula, Unknown handling, and canonical findings ordering. |
+| [docs/orchestrator_prompt_template.md](docs/orchestrator_prompt_template.md) | System and user prompt templates, output structure, and evaluator guardrails. |
+| [docs/orchestrator_wireframe_spec.md](docs/orchestrator_wireframe_spec.md) | UI wireframe specification for the right-side copilot panel and application layout. |
+
+See [docs/README.md](docs/README.md) for the recommended reading order.
+
 ## Evaluation Priorities
 The AI should prioritize:
 
@@ -95,8 +107,8 @@ In the right-side panel:
 - show the Accessibility Health Score at the top
 - show rule results clearly underneath
 - surface **Pass** rules first
-- show **Fail** rules lower in the list
 - show **Unknown** where evidence is missing
+- show **Fail** rules last
 
 ## Tone and Writing Style
 The AI should use a tone that is:

@@ -109,8 +109,8 @@ This section should:
 The findings list should be ordered as follows:
 
 1. Pass rules first
-2. Fail rules lower in the list
-3. Unknown shown wherever evidence is missing
+2. Unknown shown wherever evidence is missing
+3. Fail rules last
 
 Unknown should not be treated as Pass or Fail. It should be surfaced explicitly when a rule cannot be verified from the available evidence.
 
@@ -193,5 +193,5 @@ Build priorities:
 - preserve the right-rail interaction model
 - preserve the code-editor context
 - preserve the score-first hierarchy
-- preserve the findings order: Pass first, Fail lower, Unknown when evidence is missing
+- preserve the findings order: Pass first, Unknown where evidence is missing, Fail last
 - keep Push to Figma and Jira Ticket visible but disabled

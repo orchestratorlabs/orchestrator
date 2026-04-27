@@ -14,6 +14,8 @@ Define explicit, transparent MVP scoring logic before evaluator implementation.
 - Edge case: if `passCount + failCount = 0`, return score `0` and mark evaluation as evidence-limited.
 
 ## Findings Ordering Policy (MVP)
+This is the canonical findings ordering across all Orchestrator documentation.
+
 Required display order:
 1. Pass
 2. Unknown

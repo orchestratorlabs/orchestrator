@@ -94,8 +94,8 @@ When possible, also cite the relevant RAG rule or registry section that supports
 Order findings as follows:
 
 1. Pass rules first
-2. Fail rules lower in the list
-3. Unknown shown where evidence is insufficient
+2. Unknown shown where evidence is insufficient
+3. Fail rules last
 
 This ordering should support the product’s desired inspection pattern inside the right rail.
 
@@ -176,7 +176,7 @@ Rules:
 - When possible, cite the relevant RAG rule or registry section
 - Keep the response concise, structured, and actionable
 
-Order findings with Pass first, Fail lower, and Unknown where evidence is insufficient.
+Order findings with Pass first, Unknown where evidence is insufficient, and Fail last.
 
 ### User Prompt Template
 Evaluate this React button component for accessibility.
