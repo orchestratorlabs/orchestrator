@@ -462,7 +462,6 @@ export function WorkspacePane({
       <section className="editor-block preview-block">
         <div className="preview-header">
           <p className="preview-title">Live Component Preview</p>
-          <span className="muted">Tab from the editors to focus the Close button — hover and click work normally</span>
         </div>
         <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} />
       </section>
