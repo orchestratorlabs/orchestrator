@@ -1,19 +1,18 @@
 import { useLayoutEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-/** Shadow :host replaces document :root so design tokens apply inside the preview without touching app :root. */
+export type ButtonPreviewState = "default" | "hover" | "active" | "disabled" | "focused";
+
 function scopePreviewCss(css: string): string {
   return css.replace(/:root\b/g, ":host");
 }
 
 const PREVIEW_SHELL_CSS = `
+@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&display=swap");
+
 :host {
   display: block;
   box-sizing: border-box;
-  color-scheme: dark;
-  background: #0f141d;
-  color: #d6deeb;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   min-height: 120px;
   width: 100%;
 }
@@ -24,14 +23,81 @@ const PREVIEW_SHELL_CSS = `
   align-items: center;
   justify-content: flex-start;
   overflow: visible;
+  background: #E6E6E6;
 }
 .preview-empty {
   min-height: 120px;
   padding: 16px;
-  color: #9aa6ba;
+  color: #6b7280;
   font-size: 12px;
+  font-family: Inter, system-ui, sans-serif;
   display: flex;
   align-items: center;
+  background: #E6E6E6;
+}
+.icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 0.5rem;
+  background: #0540AB;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Atkinson Hyperlegible Next", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.icon-btn__icon {
+  display: none;
+}
+.icon-btn__label {
+  display: inline;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+`;
+
+/* Inserted after user CSS so these modifier classes always win the cascade. */
+const PREVIEW_STATE_CSS = `
+.icon-btn.icon-btn--default {
+  background: #0540AB;
+  color: #FFFFFF;
+  outline: none;
+  cursor: pointer;
+}
+.icon-btn.icon-btn--hover {
+  background: #022D7F;
+  color: #FFFFFF;
+  outline: none;
+  cursor: pointer;
+}
+.icon-btn.icon-btn--active {
+  background: #011D53;
+  color: #FFFFFF;
+  outline: none;
+  cursor: pointer;
+}
+.icon-btn.icon-btn--disabled {
+  background: #BDBDBD;
+  color: #494949;
+  cursor: not-allowed;
+  opacity: 1;
+  outline: none;
+}
+.icon-btn.icon-btn--focused {
+  background: #0540AB;
+  color: #FFFFFF;
+  outline: 3px solid #011D53;
+  outline-offset: 2px;
+  cursor: pointer;
 }
 `;
 
@@ -39,7 +105,13 @@ function hasRenderableButton(reactCode: string): boolean {
   return /<button\b/i.test(reactCode);
 }
 
-function PreviewContent({ reactCode }: { reactCode: string }) {
+function PreviewContent({
+  reactCode,
+  selectedState,
+}: {
+  reactCode: string;
+  selectedState: ButtonPreviewState;
+}) {
   if (!hasRenderableButton(reactCode)) {
     return (
       <div className="preview-empty">
@@ -50,11 +122,13 @@ function PreviewContent({ reactCode }: { reactCode: string }) {
 
   return (
     <div className="preview-canvas">
-      <button type="button" className="icon-btn" onClick={() => {}}>
-        <span aria-hidden="true" className="icon-btn__icon">
-          ✕
-        </span>
-        <span className="icon-btn__label">Close</span>
+      <button
+        type="button"
+        className={`icon-btn icon-btn--${selectedState}`}
+        disabled={selectedState === "disabled"}
+        onClick={() => {}}
+      >
+        <span className="icon-btn__label">Button large</span>
       </button>
     </div>
   );
@@ -63,13 +137,21 @@ function PreviewContent({ reactCode }: { reactCode: string }) {
 export interface LiveButtonPreviewProps {
   cssCode: string;
   reactCode: string;
+  selectedState?: ButtonPreviewState;
 }
 
 /**
  * Renders the MVP button preview in an open shadow root so edited `.icon-btn` / token CSS
  * does not collide with the host app, while keeping a real native button in normal tab order.
+ *
+ * Shadow DOM order: shell → user CSS → state overrides → React mount.
+ * State override CSS sits after user CSS so modifier classes always win the cascade.
  */
-export function LiveButtonPreview({ cssCode, reactCode }: LiveButtonPreviewProps) {
+export function LiveButtonPreview({
+  cssCode,
+  reactCode,
+  selectedState = "default",
+}: LiveButtonPreviewProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const userStyleRef = useRef<HTMLStyleElement | null>(null);
   const reactRootRef = useRef<Root | null>(null);
@@ -86,11 +168,18 @@ export function LiveButtonPreview({ cssCode, reactCode }: LiveButtonPreviewProps
       const shell = document.createElement("style");
       shell.setAttribute("data-preview-shell", "");
       shell.textContent = PREVIEW_SHELL_CSS;
+
       const userStyle = document.createElement("style");
       userStyle.setAttribute("data-preview-user", "");
+
+      const stateOverride = document.createElement("style");
+      stateOverride.setAttribute("data-preview-state", "");
+      stateOverride.textContent = PREVIEW_STATE_CSS;
+
       const mount = document.createElement("div");
       mount.setAttribute("data-preview-mount", "");
-      shadow.append(shell, userStyle, mount);
+
+      shadow.append(shell, userStyle, stateOverride, mount);
       userStyleRef.current = userStyle;
       reactRootRef.current = createRoot(mount);
     }
@@ -110,8 +199,10 @@ export function LiveButtonPreview({ cssCode, reactCode }: LiveButtonPreviewProps
   }, [cssCode]);
 
   useLayoutEffect(() => {
-    reactRootRef.current?.render(<PreviewContent reactCode={reactCode} />);
-  }, [reactCode]);
+    reactRootRef.current?.render(
+      <PreviewContent reactCode={reactCode} selectedState={selectedState} />
+    );
+  }, [reactCode, selectedState]);
 
   return <div ref={hostRef} className="live-button-preview-host" />;
 }

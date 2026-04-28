@@ -3,6 +3,11 @@ import { orderFindingsForMvp } from "../types/rules";
 
 type Severity = RuleResult["severity"];
 
+// The preview canvas background used for light-mode component inspection.
+// WCAG 1.4.11: an `outline` focus ring sits outside the button boundary, so the
+// relevant adjacent color for non-text contrast is this surrounding surface, not the button fill.
+const PREVIEW_CANVAS_HEX = "#E6E6E6";
+
 interface RuleDefinition {
   ruleId: string;
   ruleName: string;
@@ -357,22 +362,21 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
     );
   } else {
     const outlineHex = extractHexColor((focusBlock.match(/outline\s*:\s*[^#]*(#[0-9a-fA-F]{6})/) ?? [])[1] ?? "");
-    const baseBackgroundHex = extractHexColor((baseBlock?.match(/background(?:-color)?\s*:\s*([^;]+);/) ?? [])[1] ?? "");
-    if (outlineHex && baseBackgroundHex) {
-      const ratio = contrastRatio(outlineHex, baseBackgroundHex);
+    if (outlineHex) {
+      const ratio = contrastRatio(outlineHex, PREVIEW_CANVAS_HEX);
       if (ratio >= 3) {
         findings.push(
           createPass(
             RULES[5],
-            `Computed non-text contrast ratio ${ratio.toFixed(2)}:1 for focus indicator (>= 3:1).`
+            `Computed non-text contrast ratio ${ratio.toFixed(2)}:1 for focus indicator against canvas background (>= 3:1).`
           )
         );
       } else {
         findings.push(
           createFail(
             RULES[5],
-            `Computed non-text contrast ratio ${ratio.toFixed(2)}:1 for focus indicator (< 3:1).`,
-            "Increase contrast between focus indicator/component boundary and adjacent colors to at least 3:1."
+            `Computed non-text contrast ratio ${ratio.toFixed(2)}:1 for focus indicator against canvas background (< 3:1).`,
+            "Increase contrast between the focus ring color and the surrounding background to at least 3:1 (WCAG 1.4.11)."
           )
         );
       }
@@ -380,8 +384,8 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
       findings.push(
         createUnknown(
           RULES[5],
-          "Focus indicator or adjacent color resolves through variables, so non-text contrast cannot be confidently computed.",
-          "Provide resolved color values for focus ring and adjacent surfaces."
+          "Focus indicator color resolves through a variable with no extractable hex fallback; non-text contrast cannot be computed.",
+          "Provide a resolved hex color for the focus ring to enable 3:1 contrast verification."
         )
       );
     }

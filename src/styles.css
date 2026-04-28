@@ -186,6 +186,33 @@ body {
   font-weight: 600;
 }
 
+.preview-state-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-state-label {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.preview-state-select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.preview-state-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .live-button-preview-host {
   width: 100%;
   min-height: 160px;

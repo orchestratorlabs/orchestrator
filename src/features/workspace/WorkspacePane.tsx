@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { EvaluationResult, RuleResult } from "../orchestrator/types/evaluation";
-import { LiveButtonPreview } from "./LiveButtonPreview";
+import { LiveButtonPreview, type ButtonPreviewState } from "./LiveButtonPreview";
 
 const SAMPLE_TSX = `import React from "react";
 import "./MixedIconButton.css";
@@ -31,13 +31,13 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
 
 :root {
   --Corner-M: 0.5rem;
-  --Bg-Brand: #0540ab;
-  --Bg-Brand-Hover: #043892;
-  --Bg-Brand-Active: #032d75;
-  --Text-On-Brand: #ffffff;
-  --Focus-Ring: #111827;
-  --Bg-Disabled: #cbd5e1;
-  --Text-Disabled: #475569;
+  --Bg-Brand: #0540AB;
+  --Bg-Brand-Hover: #022D7F;
+  --Bg-Brand-Active: #011D53;
+  --Text-On-Brand: #FFFFFF;
+  --Focus-Ring: #011D53;
+  --Bg-Disabled: #BDBDBD;
+  --Text-Disabled: #494949;
 }
 
 .icon-btn {
@@ -59,21 +59,21 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
 }
 
 .icon-btn:focus-visible {
-  outline: 3px solid var(--Focus-Ring, #111827);
+  outline: 3px solid var(--Focus-Ring, #011D53);
   outline-offset: 2px;
 }
 
 .icon-btn:hover {
-  background: var(--Bg-Brand-Hover, #043892);
+  background: var(--Bg-Brand-Hover, #022D7F);
 }
 
 .icon-btn:active {
-  background: var(--Bg-Brand-Active, #032d75);
+  background: var(--Bg-Brand-Active, #011D53);
 }
 
 .icon-btn:disabled {
-  background: var(--Bg-Disabled, #cbd5e1);
-  color: var(--Text-Disabled, #475569);
+  background: var(--Bg-Disabled, #BDBDBD);
+  color: var(--Text-Disabled, #494949);
   cursor: not-allowed;
   opacity: 1;
 }
@@ -417,6 +417,8 @@ export function WorkspacePane({
     ? annotations.find((annotation) => annotation.id === selectedFindingRuleId) ?? null
     : null;
 
+  const [selectedButtonState, setSelectedButtonState] = useState<ButtonPreviewState>("default");
+
   const tsxEditorBlockRef = useRef<HTMLDivElement>(null);
   const cssEditorBlockRef = useRef<HTMLDivElement>(null);
   const tsxTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -462,8 +464,25 @@ export function WorkspacePane({
       <section className="editor-block preview-block">
         <div className="preview-header">
           <p className="preview-title">Live Component Preview</p>
+          <div className="preview-state-control">
+            <label htmlFor="button-state-select" className="preview-state-label">
+              Button state
+            </label>
+            <select
+              id="button-state-select"
+              className="preview-state-select"
+              value={selectedButtonState}
+              onChange={(e) => setSelectedButtonState(e.target.value as ButtonPreviewState)}
+            >
+              <option value="default">Default</option>
+              <option value="hover">Hover</option>
+              <option value="active">Active</option>
+              <option value="disabled">Disabled</option>
+              <option value="focused">Focused</option>
+            </select>
+          </div>
         </div>
-        <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} />
+        <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} selectedState={selectedButtonState} />
       </section>
 
       <div className="editor-stack">
