@@ -493,7 +493,7 @@ export function WorkspacePane({
         <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} selectedState={selectedButtonState} hasLoadedCode={hasLoadedComponentCode} />
       </section>
 
-      <div className="editor-stack">
+      {hasLoadedComponentCode && <div className="editor-stack">
         <div
           ref={tsxEditorBlockRef}
           className={`editor-block ${
@@ -619,7 +619,7 @@ export function WorkspacePane({
             </div>
           </div>
         </div>
-      </div>
+      </div>}
     </section>
   );
 }
