@@ -204,9 +204,9 @@ body {
 
 .preview-title {
   margin: 0;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
+  color: #E6E6E6;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .preview-state-control {

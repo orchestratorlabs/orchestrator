@@ -29,7 +29,8 @@ const PREVIEW_SHELL_CSS = `
   min-height: 120px;
   padding: 16px;
   color: #1a1a1a;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 700;
   font-family: Inter, system-ui, sans-serif;
   display: flex;
   align-items: center;
@@ -117,7 +118,7 @@ function PreviewContent({
   if (!hasLoadedCode) {
     return (
       <div className="preview-empty">
-        Click "Load Component Code" to preview and inspect the button.
+        Select "Load Component Code" to preview and inspect the component.
       </div>
     );
   }

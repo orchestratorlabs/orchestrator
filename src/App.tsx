@@ -9,6 +9,7 @@ import type { EvaluationResult } from "./features/orchestrator/types/evaluation"
 export function App() {
   const { isPanelOpen, togglePanel } = useOrchestratorState();
   const [hasLoadedComponentCode, setHasLoadedComponentCode] = useState(false);
+  const [loadedComponentName, setLoadedComponentName] = useState<string | null>(null);
   const [reactCode, setReactCode] = useState("");
   const [cssCode, setCssCode] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -22,6 +23,7 @@ export function App() {
     setReactCode(SAMPLE_BUTTON_TSX);
     setCssCode(SAMPLE_BUTTON_CSS);
     setHasLoadedComponentCode(true);
+    setLoadedComponentName("Button");
     setSelectedFindingRuleId(null);
     setEvaluationResult(null);
     setEvaluationStateMessage("Component code loaded. Select a button state and run the accessibility check.");
@@ -64,6 +66,7 @@ export function App() {
           isEvaluating={isEvaluating}
           onReactCodeChange={setReactCode}
           onCssCodeChange={setCssCode}
+          loadedComponentName={loadedComponentName}
           onLoadSample={handleLoadSample}
           onEvaluate={handleEvaluate}
         />

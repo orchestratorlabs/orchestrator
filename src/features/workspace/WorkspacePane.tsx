@@ -87,6 +87,7 @@ interface WorkspacePaneProps {
   reactCode: string;
   cssCode: string;
   hasLoadedComponentCode: boolean;
+  loadedComponentName: string | null;
   evaluationResult: EvaluationResult | null;
   selectedFindingRuleId: string | null;
   isEvaluating: boolean;
@@ -401,6 +402,7 @@ export function WorkspacePane({
   reactCode,
   cssCode,
   hasLoadedComponentCode,
+  loadedComponentName,
   evaluationResult,
   selectedFindingRuleId,
   isEvaluating,
@@ -471,7 +473,9 @@ export function WorkspacePane({
 
       <section className="editor-block preview-block">
         <div className="preview-header">
-          <p className="preview-title">Live Component Preview</p>
+          <p className="preview-title">
+            Live Component Preview: {loadedComponentName ?? "No component loaded"}
+          </p>
           <div className="preview-state-control">
             <label htmlFor="button-state-select" className="preview-state-label">
               Button state
