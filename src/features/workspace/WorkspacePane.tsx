@@ -423,6 +423,15 @@ export function WorkspacePane({
 
   const [selectedButtonState, setSelectedButtonState] = useState<ButtonPreviewState>("default");
 
+  const stateOptions: { value: ButtonPreviewState; label: string }[] = [
+    { value: "default", label: "Default" },
+    { value: "hover", label: "Hover" },
+    { value: "active", label: "Active" },
+    { value: "disabled", label: "Disabled" },
+    { value: "focused", label: "Focused" },
+  ];
+  const hasComponentStates = stateOptions.length > 0;
+
   const tsxEditorBlockRef = useRef<HTMLDivElement>(null);
   const cssEditorBlockRef = useRef<HTMLDivElement>(null);
   const tsxTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -476,23 +485,25 @@ export function WorkspacePane({
           <p className="preview-title">
             Live Component Preview: {loadedComponentName ?? "No component loaded"}
           </p>
-          <div className="preview-state-control">
-            <label htmlFor="button-state-select" className="preview-state-label">
-              Button state
-            </label>
-            <select
-              id="button-state-select"
-              className="preview-state-select"
-              value={selectedButtonState}
-              onChange={(e) => setSelectedButtonState(e.target.value as ButtonPreviewState)}
-            >
-              <option value="default">Default</option>
-              <option value="hover">Hover</option>
-              <option value="active">Active</option>
-              <option value="disabled">Disabled</option>
-              <option value="focused">Focused</option>
-            </select>
-          </div>
+          {hasLoadedComponentCode && loadedComponentName && hasComponentStates && (
+            <div className="component-state-switcher">
+              <div className="preview-state-control">
+                <label htmlFor="button-state-select" className="component-state-switcher__label">
+                  {loadedComponentName} state
+                </label>
+                <select
+                  id="button-state-select"
+                  className="preview-state-select"
+                  value={selectedButtonState}
+                  onChange={(e) => setSelectedButtonState(e.target.value as ButtonPreviewState)}
+                >
+                  {stateOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
         <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} selectedState={selectedButtonState} hasLoadedCode={hasLoadedComponentCode} />
       </section>

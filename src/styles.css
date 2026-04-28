@@ -197,9 +197,14 @@ body {
 .preview-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.component-state-switcher {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .preview-title {
@@ -215,10 +220,13 @@ body {
   gap: 8px;
 }
 
-.preview-state-label {
-  color: var(--muted);
-  font-size: 12px;
+.component-state-switcher__label {
+  color: #E6E6E6;
+  font-size: 14px;
+  font-weight: 500;
   white-space: nowrap;
+  margin: 0;
+  line-height: 1;
 }
 
 .preview-state-select {
