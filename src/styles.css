@@ -220,7 +220,7 @@ body {
   gap: 8px;
 }
 
-.component-state-switcher__label {
+.component-state-switcher .component-state-switcher__label {
   color: #E6E6E6;
   font-size: 14px;
   font-weight: 500;
