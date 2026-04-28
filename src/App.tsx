@@ -8,11 +8,12 @@ import type { EvaluationResult } from "./features/orchestrator/types/evaluation"
 
 export function App() {
   const { isPanelOpen, togglePanel } = useOrchestratorState();
-  const [reactCode, setReactCode] = useState(SAMPLE_BUTTON_TSX);
-  const [cssCode, setCssCode] = useState(SAMPLE_BUTTON_CSS);
+  const [hasLoadedComponentCode, setHasLoadedComponentCode] = useState(false);
+  const [reactCode, setReactCode] = useState("");
+  const [cssCode, setCssCode] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationStateMessage, setEvaluationStateMessage] = useState(
-    "Sample button loaded. Ready to evaluate."
+    "Load component code to begin."
   );
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
   const [selectedFindingRuleId, setSelectedFindingRuleId] = useState<string | null>(null);
@@ -20,11 +21,14 @@ export function App() {
   const handleLoadSample = () => {
     setReactCode(SAMPLE_BUTTON_TSX);
     setCssCode(SAMPLE_BUTTON_CSS);
+    setHasLoadedComponentCode(true);
     setSelectedFindingRuleId(null);
-    setEvaluationStateMessage("Sample button loaded. Ready to evaluate.");
+    setEvaluationResult(null);
+    setEvaluationStateMessage("Component code loaded. Select a button state and run the accessibility check.");
   };
 
   const handleEvaluate = () => {
+    if (!hasLoadedComponentCode) return;
     const currentReactCode = reactCode;
     const currentCssCode = cssCode;
     setIsEvaluating(true);
@@ -54,6 +58,7 @@ export function App() {
         <WorkspacePane
           reactCode={reactCode}
           cssCode={cssCode}
+          hasLoadedComponentCode={hasLoadedComponentCode}
           evaluationResult={evaluationResult}
           selectedFindingRuleId={selectedFindingRuleId}
           isEvaluating={isEvaluating}

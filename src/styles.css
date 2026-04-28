@@ -132,6 +132,7 @@ body {
   background: var(--surface);
   color: var(--muted);
   padding: 8px 10px;
+  cursor: pointer;
 }
 
 .tab.active {

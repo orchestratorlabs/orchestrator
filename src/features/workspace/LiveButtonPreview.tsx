@@ -28,8 +28,8 @@ const PREVIEW_SHELL_CSS = `
 .preview-empty {
   min-height: 120px;
   padding: 16px;
-  color: #6b7280;
-  font-size: 12px;
+  color: #1a1a1a;
+  font-size: 14px;
   font-family: Inter, system-ui, sans-serif;
   display: flex;
   align-items: center;
@@ -108,10 +108,20 @@ function hasRenderableButton(reactCode: string): boolean {
 function PreviewContent({
   reactCode,
   selectedState,
+  hasLoadedCode,
 }: {
   reactCode: string;
   selectedState: ButtonPreviewState;
+  hasLoadedCode: boolean;
 }) {
+  if (!hasLoadedCode) {
+    return (
+      <div className="preview-empty">
+        Click "Load Component Code" to preview and inspect the button.
+      </div>
+    );
+  }
+
   if (!hasRenderableButton(reactCode)) {
     return (
       <div className="preview-empty">
@@ -138,6 +148,7 @@ export interface LiveButtonPreviewProps {
   cssCode: string;
   reactCode: string;
   selectedState?: ButtonPreviewState;
+  hasLoadedCode?: boolean;
 }
 
 /**
@@ -151,6 +162,7 @@ export function LiveButtonPreview({
   cssCode,
   reactCode,
   selectedState = "default",
+  hasLoadedCode = false,
 }: LiveButtonPreviewProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const userStyleRef = useRef<HTMLStyleElement | null>(null);
@@ -200,9 +212,9 @@ export function LiveButtonPreview({
 
   useLayoutEffect(() => {
     reactRootRef.current?.render(
-      <PreviewContent reactCode={reactCode} selectedState={selectedState} />
+      <PreviewContent reactCode={reactCode} selectedState={selectedState} hasLoadedCode={hasLoadedCode} />
     );
-  }, [reactCode, selectedState]);
+  }, [reactCode, selectedState, hasLoadedCode]);
 
   return <div ref={hostRef} className="live-button-preview-host" />;
 }

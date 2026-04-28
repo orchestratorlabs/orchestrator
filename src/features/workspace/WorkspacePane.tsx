@@ -86,6 +86,7 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
 interface WorkspacePaneProps {
   reactCode: string;
   cssCode: string;
+  hasLoadedComponentCode: boolean;
   evaluationResult: EvaluationResult | null;
   selectedFindingRuleId: string | null;
   isEvaluating: boolean;
@@ -399,6 +400,7 @@ function scrollTextareaToLine(textarea: HTMLTextAreaElement, line: number) {
 export function WorkspacePane({
   reactCode,
   cssCode,
+  hasLoadedComponentCode,
   evaluationResult,
   selectedFindingRuleId,
   isEvaluating,
@@ -456,7 +458,13 @@ export function WorkspacePane({
         <button type="button" className="tab active" onClick={onLoadSample}>
           Load Component Code
         </button>
-        <button type="button" className="evaluate-btn" onClick={onEvaluate} disabled={isEvaluating}>
+        <button
+          type="button"
+          className="evaluate-btn"
+          onClick={onEvaluate}
+          disabled={isEvaluating || !hasLoadedComponentCode}
+          title={!hasLoadedComponentCode ? "Load component code first" : undefined}
+        >
           {isEvaluating ? "Evaluating..." : "Run Accessibility Check"}
         </button>
       </div>
@@ -482,7 +490,7 @@ export function WorkspacePane({
             </select>
           </div>
         </div>
-        <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} selectedState={selectedButtonState} />
+        <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} selectedState={selectedButtonState} hasLoadedCode={hasLoadedComponentCode} />
       </section>
 
       <div className="editor-stack">
