@@ -455,7 +455,7 @@ export function WorkspacePane({
       </div>
 
       <div className="workspace-toolbar">
-        <button type="button" className="tab active" onClick={onLoadSample}>
+        <button type="button" className="load-component-btn" onClick={onLoadSample}>
           Load Component Code
         </button>
         <button
