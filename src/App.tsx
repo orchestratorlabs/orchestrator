@@ -19,15 +19,37 @@ export function App() {
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
   const [selectedFindingRuleId, setSelectedFindingRuleId] = useState<string | null>(null);
 
-  const handleLoadSample = () => {
-    setReactCode(SAMPLE_BUTTON_TSX);
-    setCssCode(SAMPLE_BUTTON_CSS);
-    setHasLoadedComponentCode(true);
-    setLoadedComponentName("Button");
-    setSelectedFindingRuleId(null);
-    setEvaluationResult(null);
-    setEvaluationStateMessage("Component code loaded. Select a button state and run the accessibility check.");
-  };
+  const handleLoadSample = async () => {
+  setReactCode(SAMPLE_BUTTON_TSX);
+  setCssCode(SAMPLE_BUTTON_CSS);
+  setHasLoadedComponentCode(true);
+  setLoadedComponentName("Button");
+  setSelectedFindingRuleId(null);
+  setEvaluationResult(null);
+  setEvaluationStateMessage(
+    "Component code loaded. Select a button state and run the accessibility check."
+  );
+
+  try {
+    const response = await fetch("http://127.0.0.1:5001/echo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        componentCode: SAMPLE_BUTTON_TSX,
+      }),
+    });
+
+    const data = await response.json();
+
+    setEvaluationStateMessage(data.message);
+  } catch (error) {
+    setEvaluationStateMessage(
+      "Component code loaded. Flask echo confirmation failed."
+    );
+  }
+};
 
   const handleEvaluate = () => {
     if (!hasLoadedComponentCode) return;
