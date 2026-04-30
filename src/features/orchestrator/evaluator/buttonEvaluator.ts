@@ -171,10 +171,16 @@ function buildSummary(findings: RuleResult[], score: number): string {
   const passCount = findings.filter((f) => f.status === "Pass").length;
   const failCount = findings.filter((f) => f.status === "Fail").length;
   const unknownCount = findings.filter((f) => f.status === "Unknown").length;
+
   if (failCount === 0 && unknownCount === 0) {
-    return `Strong accessibility baseline. ${passCount} rules passed with no known failures.`;
+    return `Strong accessibility baseline. ${passCount} rules passed with no known failures. All checks had enough evidence to evaluate; no verified accessibility issues were found.`;
   }
-  return `Score ${score}/100 with ${passCount} pass, ${unknownCount} unknown, and ${failCount} fail findings. Unknown results indicate evidence gaps that require manual verification.`;
+
+  if (unknownCount > 0) {
+    return `Score ${score}/100 with ${passCount} pass, ${unknownCount} unknown, and ${failCount} fail findings. Unknown results indicate evidence gaps that require manual verification.`;
+  }
+
+  return `Score ${score}/100 with ${passCount} pass, ${unknownCount} unknown, and ${failCount} fail findings. All checks had enough evidence to evaluate; resolve the failed rule and rerun the checker.`;
 }
 
 function buildFixes(findings: RuleResult[]): string[] {
