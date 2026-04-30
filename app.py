@@ -26,31 +26,31 @@ def mock_llm():
 
     mock_result = {
         "status": "success",
-        "message": "Mock LLM accessibility review complete.",
-        "score": 84,
-        "summary": "The component includes a semantic button and an accessible name. Additional verification is needed for focus state contrast and full keyboard interaction coverage.",
-        "findings": [
-            {
-                "status": "Pass",
-                "rule": "Semantic button",
-                "message": "The component uses a native button element."
-            },
-            {
-                "status": "Pass",
-                "rule": "Accessible name",
-                "message": "The button includes visible text that can act as an accessible name."
-            },
-            {
-                "status": "Unknown",
-                "rule": "Keyboard interaction",
-                "message": "Keyboard behavior cannot be fully verified from the static code sample alone."
-            },
-            {
-                "status": "Fail",
-                "rule": "Focus indicator contrast",
-                "message": "Focus indicator contrast requires further validation against the surrounding background."
-            }
-        ],
+        "message": "Mock LLM complete: 100/100",
+        "score": 100,
+        "summary": "The component passed the current WCAG 2.1 accessibility checks with no verified accessibility issues.",
+    "findings": [
+    {
+        "status": "Pass",
+        "rule": "Semantic button",
+        "message": "The component uses a native button element."
+    },
+    {
+        "status": "Pass",
+        "rule": "Accessible name",
+        "message": "The button includes visible text that can act as an accessible name."
+    },
+    {
+        "status": "Pass",
+        "rule": "Keyboard interaction",
+        "message": "The component remains operable through standard button keyboard behavior."
+    },
+    {
+        "status": "Pass",
+        "rule": "Focus indicator contrast",
+        "message": "No verified focus indicator contrast issue was found in the current test state."
+    }
+],
         "echo": component_code
     }
 
