@@ -73,7 +73,7 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
 
 .icon-btn:disabled {
   background: var(--Bg-Disabled, #BDBDBD);
-  color: var(--Text-Disabled, #494949);
+  color: var(--Text-Disabled, #8C8C8C);
   cursor: not-allowed;
   opacity: 1;
 }
@@ -205,8 +205,9 @@ function mapFindingToAnnotation(finding: RuleResult, reactCode: string, cssCode:
     findCssSelectorBlockRange(cssCode, /\.icon-btn:focus-visible\s*\{[\s\S]*?\}/m) ??
     findCssSelectorBlockRange(cssCode, /button:focus-visible\s*\{[\s\S]*?\}/m);
   const disabledRange =
-    findCssSelectorBlockRange(cssCode, /\.icon-btn:disabled\s*\{[\s\S]*?\}/m) ??
-    findCssSelectorBlockRange(cssCode, /button:disabled\s*\{[\s\S]*?\}/m);
+  findCssSelectorBlockRange(cssCode, /\.icon-btn:disabled\s*\{[\s\S]*?\}/m) ??
+  findCssSelectorBlockRange(cssCode, /\.icon-btn\.icon-btn--disabled\s*\{[\s\S]*?\}/m) ??
+  findCssSelectorBlockRange(cssCode, /button:disabled\s*\{[\s\S]*?\}/m);
 
   switch (finding.ruleId) {
     case "rule-1-semantic-button":
@@ -266,19 +267,29 @@ function mapFindingToAnnotation(finding: RuleResult, reactCode: string, cssCode:
         status,
         target: "css"
       };
-    case "rule-5-text-contrast":
-      return {
-        id: finding.ruleId,
-        ...cssBaseBlockRange,
-        focusLine: firstMatchingLineFromPatterns(
-          cssCode,
-          [/color\s*:/, /background(?:-color)?\s*:/, /\.icon-btn\s*\{/],
-          midpointLine(cssBaseBlockRange)
-        ),
-        label: finding.ruleName,
-        status,
-        target: "css"
-      };
+  case "rule-5-text-contrast": {
+  const isDisabledTextContrast = finding.evidence.includes("disabled-state");
+
+  const targetRange =
+    isDisabledTextContrast && disabledRange
+      ? disabledRange
+      : cssBaseBlockRange;
+
+  return {
+    id: finding.ruleId,
+    ...targetRange,
+    focusLine: firstMatchingLineFromPatterns(
+      cssCode,
+      isDisabledTextContrast
+        ? [/--Text-Disabled\s*:/, /color\s*:/, /\.icon-btn\.icon-btn--disabled\s*\{/]
+        : [/color\s*:/, /background(?:-color)?\s*:/, /\.icon-btn\s*\{/],
+      midpointLine(targetRange)
+    ),
+    label: finding.ruleName,
+    status,
+    target: "css"
+  };
+}
     case "rule-7-target-size":
       return {
         id: finding.ruleId,

@@ -312,8 +312,13 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
     );
   }
 
-  // Rule 5: text contrast
+   // Rule 5: text contrast
   const baseBlock = findCssBlock(cssCode, ".icon-btn") ?? findCssBlock(cssCode, "button");
+  const disabledBlock =
+    findCssBlock(cssCode, ".icon-btn:disabled") ??
+    findCssBlock(cssCode, ".icon-btn.icon-btn--disabled") ??
+    findCssBlock(cssCode, "button:disabled");
+
   if (!baseBlock) {
     findings.push(
       createUnknown(
@@ -324,18 +329,63 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
     );
   } else {
     const colorHex = extractHexColor((baseBlock.match(/color\s*:\s*([^;]+);/) ?? [])[1] ?? "");
-    const backgroundHex = extractHexColor((baseBlock.match(/background(?:-color)?\s*:\s*([^;]+);/) ?? [])[1] ?? "");
+    const backgroundHex = extractHexColor(
+      (baseBlock.match(/background(?:-color)?\s*:\s*([^;]+);/) ?? [])[1] ?? ""
+    );
+
+    const disabledColorHex = disabledBlock
+      ? extractHexColor((disabledBlock.match(/color\s*:\s*([^;]+);/) ?? [])[1] ?? "")
+      : null;
+
+    const disabledBackgroundHex = disabledBlock
+      ? extractHexColor(
+          (disabledBlock.match(/background(?:-color)?\s*:\s*([^;]+);/) ?? [])[1] ?? ""
+        )
+      : null;
+
     if (!colorHex || !backgroundHex) {
       findings.push(
         createUnknown(
           RULES[4],
-          "Text contrast could not be computed from token/variable-driven color declarations.",
+          "Text contrast could not be computed from token/variable-driven default color declarations.",
           "Provide resolved text and background colors for contrast verification."
         )
       );
     } else {
       const ratio = contrastRatio(colorHex, backgroundHex);
-      if (ratio >= 4.5) {
+
+      if (disabledBlock && disabledColorHex && disabledBackgroundHex) {
+        const disabledRatio = contrastRatio(disabledColorHex, disabledBackgroundHex);
+
+        if (disabledRatio < 4.5) {
+          findings.push(
+            createFail(
+              RULES[4],
+              `Computed disabled-state text contrast ratio ${disabledRatio.toFixed(
+                2
+              )}:1 (< 4.5:1) using ${disabledColorHex} text on ${disabledBackgroundHex} background.`,
+              "Adjust the disabled button label color or disabled background color to meet at least 4.5:1 contrast for normal text."
+            )
+          );
+        } else if (ratio >= 4.5) {
+          findings.push(
+            createPass(
+              RULES[4],
+              `Computed default text contrast ratio ${ratio.toFixed(
+                2
+              )}:1 and disabled-state text contrast ratio ${disabledRatio.toFixed(2)}:1 (both >= 4.5:1).`
+            )
+          );
+        } else {
+          findings.push(
+            createFail(
+              RULES[4],
+              `Computed default text contrast ratio ${ratio.toFixed(2)}:1 (< 4.5:1).`,
+              "Adjust text/background colors to meet at least 4.5:1 contrast for normal text."
+            )
+          );
+        }
+      } else if (ratio >= 4.5) {
         findings.push(
           createPass(RULES[4], `Computed text contrast ratio ${ratio.toFixed(2)}:1 (>= 4.5:1).`)
         );

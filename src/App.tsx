@@ -79,9 +79,14 @@ export function App() {
     const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
     setEvaluationResult(result);
 
-    setEvaluationStateMessage(
-      `Mock LLM complete: ${data.score}/100 — ${data.summary}`
-    );
+ const passCount = result.findings.filter((f) => f.status === "Pass").length;
+ const failCount = result.findings.filter((f) => f.status === "Fail").length;
+ const unknownCount = result.unknownCount;
+ const scoreValue = result.healthScore;
+
+setEvaluationStateMessage(
+  `Mock LLM complete: ${scoreValue}/100 — Score ${scoreValue}/100 with ${passCount} pass, ${unknownCount} unknown, and ${failCount} fail findings.`
+);
   } catch (error) {
     setEvaluationStateMessage(
       "Mock LLM request failed. Running local accessibility check instead."

@@ -88,7 +88,7 @@ const PREVIEW_STATE_CSS = `
 }
 .icon-btn.icon-btn--disabled {
   background: #BDBDBD;
-  color: #494949;
+  color: #8C8C8C;
   cursor: not-allowed;
   opacity: 1;
   outline: none;
