@@ -51,24 +51,48 @@ export function App() {
   }
 };
 
-  const handleEvaluate = () => {
-    if (!hasLoadedComponentCode) return;
-    const currentReactCode = reactCode;
-    const currentCssCode = cssCode;
-    setIsEvaluating(true);
-    setSelectedFindingRuleId(null);
-    setEvaluationResult(null);
-    setEvaluationStateMessage("Running accessibility check on current workspace code...");
+ const handleEvaluate = async () => {
+  if (!hasLoadedComponentCode) return;
 
-    window.setTimeout(() => {
-      const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
-      setEvaluationResult(result);
-      setEvaluationStateMessage(
-        `Evaluation complete: ${result.findings.filter((f) => f.status === "Pass").length} pass, ${result.unknownCount} unknown, ${result.findings.filter((f) => f.status === "Fail").length} fail.`
-      );
-      setIsEvaluating(false);
-    }, 0);
-  };
+  const currentReactCode = reactCode;
+  const currentCssCode = cssCode;
+
+  setIsEvaluating(true);
+  setSelectedFindingRuleId(null);
+  setEvaluationResult(null);
+  setEvaluationStateMessage("Sending component code to mock LLM accessibility reviewer...");
+
+  try {
+    const response = await fetch("http://127.0.0.1:5001/mock-llm", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        componentCode: currentReactCode,
+        cssCode: currentCssCode,
+      }),
+    });
+
+    const data = await response.json();
+
+    const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
+    setEvaluationResult(result);
+
+    setEvaluationStateMessage(
+      `Mock LLM complete: ${data.score}/100 — ${data.summary}`
+    );
+  } catch (error) {
+    setEvaluationStateMessage(
+      "Mock LLM request failed. Running local accessibility check instead."
+    );
+
+    const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
+    setEvaluationResult(result);
+  } finally {
+    setIsEvaluating(false);
+  }
+};
 
   return (
     <div className="app-root">
