@@ -37,7 +37,7 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
   --Text-On-Brand: #FFFFFF;
   --Focus-Ring: #011D53;
   --Bg-Disabled: #BDBDBD;
-  --Text-Disabled: #494949;
+  --Text-Disabled: #8C8C8C;
 }
 
 .icon-btn {
