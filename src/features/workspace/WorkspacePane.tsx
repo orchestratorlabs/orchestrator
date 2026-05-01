@@ -267,7 +267,7 @@ function mapFindingToAnnotation(finding: RuleResult, reactCode: string, cssCode:
         status,
         target: "css"
       };
-  case "rule-5-text-contrast": {
+case "rule-5-text-contrast": {
   const isDisabledTextContrast = finding.evidence.includes("disabled-state");
 
   const targetRange =
@@ -281,7 +281,7 @@ function mapFindingToAnnotation(finding: RuleResult, reactCode: string, cssCode:
     focusLine: firstMatchingLineFromPatterns(
       cssCode,
       isDisabledTextContrast
-        ? [/--Text-Disabled\s*:/, /color\s*:/, /\.icon-btn\.icon-btn--disabled\s*\{/]
+        ? [/color\s*:\s*var\(--Text-Disabled/, /color\s*:/]
         : [/color\s*:/, /background(?:-color)?\s*:/, /\.icon-btn\s*\{/],
       midpointLine(targetRange)
     ),

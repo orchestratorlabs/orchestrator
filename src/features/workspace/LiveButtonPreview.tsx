@@ -67,32 +67,63 @@ const PREVIEW_SHELL_CSS = `
 `;
 
 /* Inserted after user CSS so these modifier classes always win the cascade. */
-const PREVIEW_STATE_CSS = `
+function extractCssTokenValue(cssCode: string, tokenName: string, fallback: string): string {
+  const escapedToken = tokenName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = cssCode.match(new RegExp(`${escapedToken}\\s*:\\s*(#[0-9a-fA-F]{3,8})\\s*;`));
+
+  return match?.[1] ?? fallback;
+}
+
+function extractCssVarFallback(cssCode: string, propertyName: string, tokenName: string): string | null {
+  const escapedProperty = propertyName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedToken = tokenName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const match = cssCode.match(
+    new RegExp(`${escapedProperty}\\s*:\\s*var\\(${escapedToken}\\s*,\\s*(#[0-9a-fA-F]{3,8})\\s*\\)\\s*;`)
+  );
+
+  return match?.[1] ?? null;
+}
+
+function buildPreviewStateCss(cssCode: string): string {
+  const disabledBackground =
+    extractCssVarFallback(cssCode, "background", "--Bg-Disabled") ??
+    extractCssTokenValue(cssCode, "--Bg-Disabled", "#BDBDBD");
+
+  const disabledText =
+    extractCssVarFallback(cssCode, "color", "--Text-Disabled") ??
+    extractCssTokenValue(cssCode, "--Text-Disabled", "#494949");
+
+  return `
 .icon-btn.icon-btn--default {
   background: #0540AB;
   color: #FFFFFF;
   outline: none;
   cursor: pointer;
 }
+
 .icon-btn.icon-btn--hover {
   background: #022D7F;
   color: #FFFFFF;
   outline: none;
   cursor: pointer;
 }
+
 .icon-btn.icon-btn--active {
   background: #011D53;
   color: #FFFFFF;
   outline: none;
   cursor: pointer;
 }
+
 .icon-btn.icon-btn--disabled {
-  background: #BDBDBD;
-  color: #8C8C8C;
+  background: ${disabledBackground};
+  color: ${disabledText};
   cursor: not-allowed;
   opacity: 1;
   outline: none;
 }
+
 .icon-btn.icon-btn--focused {
   background: #0540AB;
   color: #FFFFFF;
@@ -101,6 +132,7 @@ const PREVIEW_STATE_CSS = `
   cursor: pointer;
 }
 `;
+}
 
 function hasRenderableButton(reactCode: string): boolean {
   return /<button\b/i.test(reactCode);
@@ -165,9 +197,10 @@ export function LiveButtonPreview({
   selectedState = "default",
   hasLoadedCode = false,
 }: LiveButtonPreviewProps) {
-  const hostRef = useRef<HTMLDivElement>(null);
-  const userStyleRef = useRef<HTMLStyleElement | null>(null);
-  const reactRootRef = useRef<Root | null>(null);
+const hostRef = useRef<HTMLDivElement>(null);
+const userStyleRef = useRef<HTMLStyleElement | null>(null);
+const stateStyleRef = useRef<HTMLStyleElement | null>(null);
+const reactRootRef = useRef<Root | null>(null);
 
   useLayoutEffect(() => {
     const el = hostRef.current;
@@ -187,7 +220,8 @@ export function LiveButtonPreview({
 
       const stateOverride = document.createElement("style");
       stateOverride.setAttribute("data-preview-state", "");
-      stateOverride.textContent = PREVIEW_STATE_CSS;
+      stateOverride.textContent = buildPreviewStateCss(cssCode);
+      stateStyleRef.current = stateOverride;
 
       const mount = document.createElement("div");
       mount.setAttribute("data-preview-mount", "");
@@ -201,15 +235,20 @@ export function LiveButtonPreview({
       reactRootRef.current?.unmount();
       reactRootRef.current = null;
       userStyleRef.current = null;
+      stateStyleRef.current = null;
       shadow.replaceChildren();
     };
   }, []);
 
-  useLayoutEffect(() => {
-    if (userStyleRef.current) {
-      userStyleRef.current.textContent = scopePreviewCss(cssCode);
-    }
-  }, [cssCode]);
+useLayoutEffect(() => {
+  if (userStyleRef.current) {
+    userStyleRef.current.textContent = scopePreviewCss(cssCode);
+  }
+
+  if (stateStyleRef.current) {
+    stateStyleRef.current.textContent = buildPreviewStateCss(cssCode);
+  }
+}, [cssCode]);
 
   useLayoutEffect(() => {
     reactRootRef.current?.render(
