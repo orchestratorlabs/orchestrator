@@ -1,3 +1,6 @@
+import json
+import os
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pathlib import Path
@@ -15,7 +18,6 @@ COMPONENT_RAG_MAP = {
 }
 
 SUPPORTED_COMPONENTS = list(COMPONENT_RAG_MAP.keys())
-
 
 # ---------------------------------------------------------------------------
 # RAG helpers
@@ -81,6 +83,125 @@ def resolve_component_rag(component_type):
     if text is None:
         return None, f"RAG file for component type '{normalized}' could not be read from the backend rag directory."
     return text, None
+
+
+# ---------------------------------------------------------------------------
+# Claude helpers
+# ---------------------------------------------------------------------------
+
+def get_claude_client():
+    """Return an Anthropic client if ANTHROPIC_API_KEY is set, otherwise None."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        return None
+    try:
+        import anthropic
+        return anthropic.Anthropic(api_key=api_key)
+    except Exception:
+        return None
+
+
+def get_claude_model():
+    return os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6").strip()
+
+
+def build_rag_prompt(question, component_type, registry_text, component_rag_text, component_context):
+    return f"""You are OrchestratoR, an accessibility co-pilot. Answer the user's accessibility question using only the RAG context provided below.
+
+Return strict JSON only — no markdown, no prose outside the JSON object.
+
+Required JSON shape:
+{{
+  "status": "success",
+  "message": "OrchestratoR Claude response loaded.",
+  "question": "<echo the question>",
+  "componentContext": "<echo componentContext>",
+  "answer": "<plain-text answer to the question>",
+  "apiMode": "claude",
+  "outputFormat": {{
+    "accessibilityHealthScore": "<guidance string>",
+    "summary": "<one sentence describing the accessibility issue or rule>",
+    "findings": {{
+      "pass": [],
+      "unknown": [],
+      "fail": []
+    }},
+    "recommendedFixes": []
+  }}
+}}
+
+---
+RAG REGISTRY CONTEXT:
+{registry_text[:500]}
+
+---
+COMPONENT RAG CONTEXT ({component_type}):
+{component_rag_text[:2000]}
+
+---
+COMPONENT CONTEXT FROM EVALUATOR:
+{component_context or "Not provided."}
+
+---
+USER QUESTION:
+{question}
+"""
+
+
+def call_claude(question, component_type, registry_text, component_rag_text, component_context):
+    """
+    Call Claude with the RAG prompt. Returns (parsed_dict, api_mode).
+    api_mode is 'claude' on success, 'error' on failure.
+    """
+    client = get_claude_client()
+    if client is None:
+        return None, "mock"
+
+    prompt = build_rag_prompt(
+        question, component_type, registry_text, component_rag_text, component_context
+    )
+
+    try:
+        response = client.messages.create(
+            model=get_claude_model(),
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text.strip()
+        parsed = json.loads(raw)
+        parsed["apiMode"] = "claude"
+        return parsed, "claude"
+    except json.JSONDecodeError:
+        return None, "error"
+    except Exception:
+        return None, "error"
+
+
+# ---------------------------------------------------------------------------
+# Static fallback response
+# ---------------------------------------------------------------------------
+
+STATIC_ANSWER = (
+    "OrchestratoR loaded the backend RAG registry and button accessibility rule context. "
+    "For disabled text contrast, compare the disabled label color against the disabled background color. "
+    "If the contrast ratio is below the WCAG 2.1 text contrast threshold, update the disabled text color, "
+    "rerun the checker, and confirm the finding changes from Fail to Pass."
+)
+
+STATIC_OUTPUT_FORMAT = {
+    "accessibilityHealthScore": "Use current evaluator score when available. If no score is provided, respond with guidance only.",
+    "summary": "Disabled text contrast compares the disabled label color against the disabled button background color.",
+    "findings": {
+        "pass": [],
+        "unknown": [],
+        "fail": [
+            "Disabled-state text contrast may fail when the label color is too close to the disabled background color."
+        ],
+    },
+    "recommendedFixes": [
+        "Update the disabled text color to a darker accessible value, rerun the checker, and confirm the finding changes from Fail to Pass."
+    ],
+}
 
 
 # ---------------------------------------------------------------------------
@@ -165,9 +286,10 @@ def rag_query():
     question = data.get("question", "")
     component_context = data.get("componentContext", "")
     component_type = data.get("componentType", "button")
+    use_claude = data.get("useClaude", False)
 
-    registry_preview = get_registry_preview()
-    if registry_preview is None:
+    registry_text = load_rag_file(RAG_REGISTRY_FILE)
+    if not registry_text:
         return jsonify({
             "status": "error",
             "message": "RAG registry file could not be loaded from the backend rag directory.",
@@ -183,33 +305,48 @@ def rag_query():
             "componentType": component_type,
         }), 400
 
+    registry_preview = registry_text[:500]
+    rag_preview = component_rag_text[:1200]
+
+    # --- Claude path ---
+    if use_claude:
+        parsed, api_mode = call_claude(
+            question, component_type, registry_text, component_rag_text, component_context
+        )
+
+        if api_mode == "mock":
+            # API key not configured — fall through to static response with apiMode flag
+            pass
+        elif api_mode == "claude" and parsed:
+            parsed.setdefault("registryPreview", registry_preview)
+            parsed.setdefault("ragPreview", rag_preview)
+            return jsonify(parsed)
+        else:
+            # Claude call failed — return safe error fallback
+            return jsonify({
+                "status": "error",
+                "message": "OrchestratoR could not complete the Claude request. Returning static fallback.",
+                "question": question,
+                "componentContext": component_context,
+                "registryPreview": registry_preview,
+                "ragPreview": rag_preview,
+                "answer": STATIC_ANSWER,
+                "apiMode": "error",
+                "outputFormat": STATIC_OUTPUT_FORMAT,
+            })
+
+    # --- Static / mock path ---
+    api_mode = "mock" if use_claude else "static"
     return jsonify({
         "status": "success",
         "message": "Backend RAG context loaded successfully.",
         "question": question,
         "componentContext": component_context,
         "registryPreview": registry_preview,
-        "ragPreview": component_rag_text[:1200],
-        "answer": (
-            "OrchestratoR loaded the backend RAG registry and button accessibility rule context. "
-            "For disabled text contrast, compare the disabled label color against the disabled background color. "
-            "If the contrast ratio is below the WCAG 2.1 text contrast threshold, update the disabled text color, "
-            "rerun the checker, and confirm the finding changes from Fail to Pass."
-        ),
-        "outputFormat": {
-            "accessibilityHealthScore": "Use current evaluator score when available. If no score is provided, respond with guidance only.",
-            "summary": "Disabled text contrast compares the disabled label color against the disabled button background color.",
-            "findings": {
-                "pass": [],
-                "unknown": [],
-                "fail": [
-                    "Disabled-state text contrast may fail when the label color is too close to the disabled background color."
-                ],
-            },
-            "recommendedFixes": [
-                "Update the disabled text color to a darker accessible value, rerun the checker, and confirm the finding changes from Fail to Pass."
-            ],
-        },
+        "ragPreview": rag_preview,
+        "answer": STATIC_ANSWER,
+        "apiMode": api_mode,
+        "outputFormat": STATIC_OUTPUT_FORMAT,
     })
 
 
