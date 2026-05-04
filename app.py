@@ -1,8 +1,21 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from pathlib import Path
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+BASE_DIR = Path(__file__).resolve().parent
+RAG_DIR = BASE_DIR / "rag"
+RAG_REGISTRY_FILE = RAG_DIR / "orchestrator_rag_registry.txt"
+BUTTON_RAG_FILE = RAG_DIR / "orchestrator_button_health_score_rag.txt"
+
+
+def read_text_file(path):
+    if not path.exists():
+        return ""
+
+    return path.read_text(encoding="utf-8")
 
 @app.route("/")
 def home():
@@ -56,5 +69,35 @@ def mock_llm():
 
     return jsonify(mock_result)
 
+@app.route("/rag-query", methods=["POST"])
+def rag_query():
+    data = request.get_json()
+    question = data.get("question", "")
+    component_context = data.get("componentContext", "")
+
+    registry_text = read_text_file(RAG_REGISTRY_FILE)
+    button_rag_text = read_text_file(BUTTON_RAG_FILE)
+
+    if not registry_text or not button_rag_text:
+        return jsonify({
+            "status": "error",
+            "message": "RAG files could not be loaded from the backend rag directory.",
+            "question": question
+        }), 500
+
+    return jsonify({
+        "status": "success",
+        "message": "Backend RAG context loaded successfully.",
+        "question": question,
+        "componentContext": component_context,
+        "registryPreview": registry_text[:500],
+        "ragPreview": button_rag_text[:1200],
+        "answer": (
+            "OrchestratoR loaded the backend RAG registry and button accessibility rule context. "
+            "For disabled text contrast, compare the disabled label color against the disabled background color. "
+            "If the contrast ratio is below the WCAG 2.1 text contrast threshold, update the disabled text color, "
+            "rerun the checker, and confirm the finding changes from Fail to Pass."
+        )
+    })
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

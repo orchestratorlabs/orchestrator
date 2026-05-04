@@ -1,0 +1,318 @@
+========================================
+RAG DOCUMENT HEADER
+========================================
+id: orchestrator_react_button_a11y_health_score_v3
+file_name: orchestrator_button_health_score_rag.txt
+type: rag_knowledge_document
+title: React Button Accessibility Health Score Rules
+author: OpenAI for Craig Maher
+product: OrchestratoR
+version: 3.0
+language: English
+intended_use: Ground an LLM when evaluating a React button component and generating an accessibility health score, findings, and recommended fixes.
+
+========================================
+SOURCE-OF-TRUTH METADATA
+========================================
+primary_technical_source:
+- title: Web Content Accessibility Guidelines (WCAG) 2.1
+  organization: World Wide Web Consortium (W3C)
+  canonical_url: https://www.w3.org/TR/WCAG21/
+  document_status: W3C Recommendation
+  role: Primary technical source of truth for button evaluation rules
+  relevant_topics:
+    - 1.4.3 Contrast (Minimum)
+    - 1.4.11 Non-text Contrast
+    - 2.1.1 Keyboard
+    - 2.4.7 Focus Visible
+    - 2.5.5 Target Size
+    - 4.1.2 Name, Role, Value
+  accessed_date: 2026-04-13
+
+supporting_policy_sources:
+- title: Fact Sheet: New Rule on the Accessibility of Web Content and Mobile Apps Provided by State and Local Governments
+  organization: ADA.gov / U.S. Department of Justice
+  canonical_url: https://www.ada.gov/resources/2024-03-08-web-rule/
+  scope: Title II state and local governments
+  role: Supporting policy context showing formal adoption of WCAG 2.1 Level AA in a U.S. rule
+  publication_date: 2024-04-08
+  accessed_date: 2026-04-13
+
+- title: Guidance on Web Accessibility and the ADA
+  organization: U.S. Department of Justice
+  canonical_source_type: User-provided PDF
+  role: Supporting DOJ guidance on contrast, keyboard access, labels, and accessibility barriers
+  accessed_date: 2026-04-13
+
+========================================
+DESCRIPTION
+========================================
+This RAG file gives an LLM a compact, grounded rule set for evaluating a React button component.
+It is designed for OrchestratoR's digital twin workflow:
+Input -> React button component and states
+Schematic -> Scan against accessibility rules and expected button behavior
+Output -> A11Y findings, health score, and recommended fixes
+
+This file focuses on the most relevant accessibility checks for a button:
+- semantic HTML
+- accessible name
+- keyboard operability
+- visible focus indicator
+- text contrast
+- non-text contrast for component boundaries and focus indicators
+- target size
+- state coverage
+
+========================================
+USE CASE
+========================================
+Use Case Name:
+Generate an accurate accessibility health score for a React button component.
+
+Goal:
+OrchestratoR analyzes a React button component across its default, hover, focus, active, and disabled states and returns:
+1. accessibility findings
+2. health score out of 100
+3. recommended fixes
+
+Primary user:
+Designer, engineer, QA partner, or accessibility reviewer.
+
+Input:
+- React button component code
+- visual states when available
+- token values when available
+- design system rules when available
+
+Output:
+- Accessibility Health Score: XX / 100
+- pass/fail findings by rule
+- severity labels
+- recommended code and design fixes
+
+========================================
+RULES FOR BUTTON EVALUATION
+========================================
+Rule 1: Use semantic button markup
+Requirement:
+Use the native <button> element for clickable button behavior whenever possible.
+Why it matters:
+Standard HTML controls already satisfy Name, Role, Value when used according to specification.
+Fail examples:
+- clickable <div>
+- clickable <span>
+- custom element without correct role and keyboard support
+Pass example:
+<button type="button">Save</button>
+
+Rule 2: Button must have an accessible name
+Requirement:
+The button's name and role must be programmatically determinable.
+Pass when:
+- visible button text clearly names the action, or
+- aria-label or aria-labelledby provides the accessible name
+Fail when:
+- icon-only button has no accessible label
+- label is empty or unclear
+Pass examples:
+<button>Submit</button>
+<button aria-label="Close dialog"><CloseIcon /></button>
+
+Rule 3: All functionality must be keyboard operable
+Requirement:
+All functionality must be operable through a keyboard interface.
+Pass when:
+- button can receive focus
+- Enter or Space activates the button as expected
+Fail when:
+- click works only with pointer or mouse
+- custom button cannot be tabbed to
+- keyboard activation is missing
+
+Rule 4: Focus indicator must be visible
+Requirement:
+Any keyboard-operable user interface has a visible keyboard focus indicator.
+Pass when:
+- focus ring, outline, or equivalent is clearly visible in focus state
+Fail when:
+- outline removed with no replacement
+- focus state is visually indistinguishable
+
+Rule 5: Text contrast must meet WCAG minimum
+Requirement:
+Normal text contrast must be at least 4.5:1.
+Large text may be at least 3:1.
+Pass when:
+- button label text contrast meets threshold against background
+Fail when:
+- label color is too close to button background
+
+Rule 6: Non-text contrast must meet minimum
+Requirement:
+Visual information required to identify user interface components and states must have contrast ratio of at least 3:1 against adjacent colors.
+Pass when:
+- button boundary, focus ring, or state indicator is visually distinguishable
+Fail when:
+- focus ring blends into background
+- component boundary cannot be perceived
+
+Rule 7: Target size should support touch and pointer users
+Requirement:
+Preferred minimum target size is 44 by 44 CSS pixels.
+Pass when:
+- clickable target is at least 44x44 CSS pixels, or there is an equivalent adequately sized control
+Fail when:
+- touch target is too small for reliable activation
+Note:
+In WCAG 2.1, Target Size is Level AAA, but it is still a strong enterprise and mobile usability rule for OrchestratoR scoring.
+
+Rule 8: Disabled state must not be misleading
+Requirement:
+Disabled buttons should appear inactive and should not appear interactive.
+Pass when:
+- disabled state is visually differentiated
+- disabled button does not accept interaction
+Fail when:
+- disabled appearance looks identical to active state
+- disabled state can still be triggered
+
+Rule 9: Required button states should be checked
+Required states:
+- default
+- hover
+- focus
+- active
+- disabled when applicable
+Pass when:
+- states are present and visually distinguishable where relevant
+Fail when:
+- focus state is missing
+- hover and active states create confusing or inaccessible contrast changes
+
+========================================
+SCORING MODEL
+========================================
+Purpose:
+Produce a simple, explainable health score out of 100.
+
+Start score:
+100
+
+Deduction model:
+- Semantic HTML failure: -25
+- Missing accessible name: -25
+- Keyboard operability failure: -25
+- Missing visible focus indicator: -20
+- Text contrast failure: -15
+- Non-text contrast failure: -10
+- Target size under 44x44: -10
+- Missing required state: -5 each
+- Disabled state misleading: -5
+
+Severity guidance:
+- Critical: semantic HTML, keyboard access, missing accessible name
+- High: focus visibility, text contrast
+- Medium: non-text contrast, target size, state coverage
+- Low: minor state styling inconsistencies
+
+Clamp score:
+- Minimum 0
+- Maximum 100
+
+Interpretation bands:
+- 95-100 = Excellent
+- 85-94 = Strong
+- 70-84 = Needs improvement
+- 50-69 = High risk
+- 0-49 = Critical accessibility risk
+
+========================================
+OUTPUT FORMAT FOR THE LLM
+========================================
+Return output in this structure:
+
+Accessibility Health Score: [number]/100
+
+Summary:
+[1-2 sentence plain-language summary]
+
+Findings:
+- [Pass/Fail/Unknown] Semantic HTML
+- [Pass/Fail/Unknown] Accessible Name
+- [Pass/Fail/Unknown] Keyboard Operability
+- [Pass/Fail/Unknown] Focus Visibility
+- [Pass/Fail/Unknown] Text Contrast
+- [Pass/Fail/Unknown] Non-text Contrast
+- [Pass/Fail/Unknown] Target Size
+- [Pass/Fail/Unknown] State Coverage
+
+Recommended Fixes:
+- [specific fix]
+- [specific fix]
+- [specific fix]
+
+Severity:
+- Critical / High / Medium / Low
+
+========================================
+EXAMPLE EVALUATION
+========================================
+Example input:
+<div className="btn-primary" onClick={saveChanges}>Save</div>
+
+Example output:
+Accessibility Health Score: 40/100
+
+Summary:
+This component looks like a button but is not implemented as a semantic button. It presents major accessibility risk because keyboard and assistive technology support are not reliably guaranteed.
+
+Findings:
+- Fail: Semantic HTML
+- Fail: Accessible Name may not be reliably exposed to assistive technology
+- Fail: Keyboard Operability
+- Fail: Focus Visibility
+- Unknown: Text Contrast
+- Unknown: Non-text Contrast
+- Unknown: Target Size
+- Fail: State Coverage
+
+Recommended Fixes:
+- Replace div with native <button type="button">Save</button>
+- Add a visible focus style
+- Verify text contrast is at least 4.5:1
+- Verify button target is at least 44x44 CSS pixels
+- Add and test default, hover, focus, active, and disabled states
+
+Severity:
+Critical
+
+========================================
+SOURCE NOTES
+========================================
+Grounding notes from WCAG 2.1:
+- Text contrast minimum is 4.5:1 for normal text and 3:1 for large text.
+- Non-text contrast minimum is 3:1 for UI components and states.
+- All functionality must be keyboard operable.
+- Keyboard-operable UI must have a visible focus indicator.
+- Name and role must be programmatically determinable for user interface components.
+- Target size of 44x44 CSS pixels appears in WCAG 2.1 as Level AAA guidance.
+
+Grounding notes from DOJ ADA sources:
+- Poor color contrast is an accessibility barrier.
+- Mouse-only navigation is an accessibility barrier.
+- Labels, keyboard access, and clear instructions are important for accessible online interactions.
+- WCAG is cited or adopted as authoritative technical guidance in DOJ accessibility materials.
+
+========================================
+LLM INSTRUCTION
+========================================
+When evaluating a React button component, prefer authoritative rules in this order:
+1. native semantics and accessibility support
+2. keyboard access and focus visibility
+3. accessible name exposure
+4. text and non-text contrast
+5. target size and state completeness
+
+Do not invent requirements that are not supported by the source notes.
+If evidence is missing, mark the rule as Unknown rather than Pass.
+If semantic markup, accessible name, or keyboard operation fails, lower the score aggressively.
