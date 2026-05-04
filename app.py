@@ -97,7 +97,21 @@ def rag_query():
             "For disabled text contrast, compare the disabled label color against the disabled background color. "
             "If the contrast ratio is below the WCAG 2.1 text contrast threshold, update the disabled text color, "
             "rerun the checker, and confirm the finding changes from Fail to Pass."
-        )
+        ),
+        "outputFormat": {
+            "accessibilityHealthScore": "Use current evaluator score when available. If no score is provided, respond with guidance only.",
+            "summary": "Disabled text contrast compares the disabled label color against the disabled button background color.",
+            "findings": {
+                "pass": [],
+                "unknown": [],
+                "fail": [
+                    "Disabled-state text contrast may fail when the label color is too close to the disabled background color."
+                ]
+            },
+            "recommendedFixes": [
+                "Update the disabled text color to a darker accessible value, rerun the checker, and confirm the finding changes from Fail to Pass."
+            ]
+        }
     })
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
