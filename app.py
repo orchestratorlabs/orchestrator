@@ -108,7 +108,12 @@ def get_claude_model():
 def build_rag_prompt(question, component_type, registry_text, component_rag_text, component_context):
     return f"""You are OrchestratoR, an accessibility co-pilot. Answer the user's accessibility question using only the RAG context provided below.
 
-Return strict JSON only — no markdown, no prose outside the JSON object.
+CRITICAL INSTRUCTIONS:
+- Your entire response must be a single valid JSON object.
+- Do NOT include any text before or after the JSON.
+- Do NOT wrap the JSON in markdown code fences (no ```json, no ```).
+- Do NOT include explanations, introductions, or closing remarks.
+- Start your response with {{ and end with }}.
 
 Required JSON shape:
 {{
@@ -145,22 +150,55 @@ COMPONENT CONTEXT FROM EVALUATOR:
 ---
 USER QUESTION:
 {question}
+
+Remember: respond with the JSON object only. No markdown. No code fences. No extra text.
 """
+
+
+def parse_claude_json_response(raw_text):
+    """
+    Robustly parse a JSON object from Claude's raw response text.
+    Handles: raw JSON, ```json fences, ``` fences, and leading/trailing prose.
+    Returns parsed dict on success, raises ValueError on failure.
+    """
+    text = raw_text.strip()
+
+    # Strip ```json ... ``` or ``` ... ``` fences
+    if text.startswith("```"):
+        text = text.lstrip("`")
+        if text.lower().startswith("json"):
+            text = text[4:]
+        end_fence = text.rfind("```")
+        if end_fence != -1:
+            text = text[:end_fence]
+        text = text.strip()
+
+    # If still not starting with {, find the first { and last } to extract the object
+    if not text.startswith("{"):
+        start = text.find("{")
+        end = text.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError("No JSON object found in Claude response.")
+        text = text[start:end + 1]
+
+    return json.loads(text)
 
 
 def call_claude(question, component_type, registry_text, component_rag_text, component_context):
     """
-    Call Claude with the RAG prompt. Returns (parsed_dict, api_mode).
-    api_mode is 'claude' on success, 'error' on failure.
+    Call Claude with the RAG prompt.
+    Returns (parsed_dict, api_mode, error_type, error_message).
+    api_mode is 'claude' on success, 'mock' when no key, 'error' on failure.
     """
     client = get_claude_client()
     if client is None:
-        return None, "mock"
+        return None, "mock", None, None
 
     prompt = build_rag_prompt(
         question, component_type, registry_text, component_rag_text, component_context
     )
 
+    raw = None
     try:
         response = client.messages.create(
             model=get_claude_model(),
@@ -168,13 +206,22 @@ def call_claude(question, component_type, registry_text, component_rag_text, com
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.content[0].text.strip()
-        parsed = json.loads(raw)
+        parsed = parse_claude_json_response(raw)
         parsed["apiMode"] = "claude"
-        return parsed, "claude"
-    except json.JSONDecodeError:
-        return None, "error"
-    except Exception:
-        return None, "error"
+        parsed.setdefault("status", "success")
+        return parsed, "claude", None, None
+    except (json.JSONDecodeError, ValueError) as e:
+        error_type = type(e).__name__
+        error_message = f"Claude response could not be parsed as JSON: {str(e)}"
+        raw_preview = raw[:500] if raw else None
+        print(f"[OrchestratoR] Claude JSON parse error — {error_type}: {error_message}")
+        print(f"[OrchestratoR] Claude raw preview: {raw_preview}")
+        return None, "error", error_type, error_message, raw_preview
+    except Exception as e:
+        error_type = type(e).__name__
+        error_message = str(e)
+        print(f"[OrchestratoR] Claude API error — {error_type}: {error_message}")
+        return None, "error", error_type, error_message, None
 
 
 # ---------------------------------------------------------------------------
@@ -310,9 +357,12 @@ def rag_query():
 
     # --- Claude path ---
     if use_claude:
-        parsed, api_mode = call_claude(
+        call_result = call_claude(
             question, component_type, registry_text, component_rag_text, component_context
         )
+        # Success returns 4-tuple; parse/API errors return 5-tuple with raw_preview
+        parsed, api_mode, error_type, error_message = call_result[:4]
+        raw_preview = call_result[4] if len(call_result) == 5 else None
 
         if api_mode == "mock":
             # API key not configured — fall through to static response with apiMode flag
@@ -322,8 +372,8 @@ def rag_query():
             parsed.setdefault("ragPreview", rag_preview)
             return jsonify(parsed)
         else:
-            # Claude call failed — return safe error fallback
-            return jsonify({
+            # Claude call failed — return safe error fallback with sanitized debug fields
+            error_body = {
                 "status": "error",
                 "message": "OrchestratoR could not complete the Claude request. Returning static fallback.",
                 "question": question,
@@ -332,8 +382,13 @@ def rag_query():
                 "ragPreview": rag_preview,
                 "answer": STATIC_ANSWER,
                 "apiMode": "error",
+                "claudeErrorType": error_type,
+                "claudeErrorMessage": error_message,
                 "outputFormat": STATIC_OUTPUT_FORMAT,
-            })
+            }
+            if raw_preview is not None:
+                error_body["claudeRawPreview"] = raw_preview
+            return jsonify(error_body)
 
     # --- Static / mock path ---
     api_mode = "mock" if use_claude else "static"
