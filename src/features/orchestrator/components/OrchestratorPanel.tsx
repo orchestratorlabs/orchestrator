@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MVP_SCORING_POLICY } from "../types/evaluation";
 import type { EvaluationResult } from "../types/evaluation";
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
@@ -26,6 +27,42 @@ export function OrchestratorPanel({
     evaluationResult?.findings.filter((finding) => finding.status === "Unknown").length ?? 0;
   const failCount = evaluationResult?.findings.filter((finding) => finding.status === "Fail").length ?? 0;
 
+  const [ragQuestion, setRagQuestion] = useState("");
+  const [ragAnswer, setRagAnswer] = useState("");
+  const [isRagLoading, setIsRagLoading] = useState(false);
+  const [ragError, setRagError] = useState("");
+
+  const handleRagSubmit = async () => {
+    if (!ragQuestion.trim()) return;
+
+    setIsRagLoading(true);
+    setRagError("");
+
+    try {
+      const response = await fetch("http://127.0.0.1:5001/rag-query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question: ragQuestion,
+          componentContext: evaluationStateMessage,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "RAG request failed.");
+      }
+
+      setRagAnswer(data.answer);
+    } catch (error) {
+      setRagError("OrchestratoR could not load the backend RAG response.");
+    } finally {
+      setIsRagLoading(false);
+    }
+  };
   return (
     <aside className={`orchestrator-panel ${isOpen ? "open" : "closed"}`} aria-hidden={!isOpen}>
       <div className="panel-header">
@@ -90,6 +127,49 @@ export function OrchestratorPanel({
           </div>
         </div>
         {evaluationResult && <p className="muted score-summary">{evaluationResult.summary}</p>}
+      </section>
+
+      <section className="panel-card ask-orchestrator-card">
+        <h3>Ask OrchestratoR</h3>
+
+        <p className="ask-orchestrator-helper">
+          Ask a question. Get an accessibility response.
+        </p>
+
+        <label className="sr-only" htmlFor="rag-question">
+          Ask OrchestratoR question
+        </label>
+
+        <textarea
+          id="rag-question"
+          className="ask-orchestrator-input"
+          value={ragQuestion}
+          onChange={(event) => setRagQuestion(event.target.value)}
+          placeholder="Ask about this component, rule, or finding..."
+          rows={3}
+        />
+
+        <button
+          type="button"
+          className="ask-orchestrator-submit"
+          onClick={handleRagSubmit}
+          disabled={isRagLoading || !ragQuestion.trim()}
+        >
+          {isRagLoading ? "Submitting..." : "Submit question"}
+        </button>
+
+        {ragError ? (
+          <div className="rag-response rag-response--error" role="alert">
+            {ragError}
+          </div>
+        ) : null}
+
+        {ragAnswer ? (
+          <div className="rag-response">
+            <h4>RAG Response</h4>
+            <p>{ragAnswer}</p>
+          </div>
+        ) : null}
       </section>
 
       <section className="panel-card">
