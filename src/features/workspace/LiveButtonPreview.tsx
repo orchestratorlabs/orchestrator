@@ -182,13 +182,19 @@ export interface LiveButtonPreviewProps {
   reactCode: string;
   selectedState?: ButtonPreviewState;
   hasLoadedCode?: boolean;
+  previewTheme?: "light" | "dark";
+}
+
+function buildThemeCss(theme: "light" | "dark"): string {
+  const bg = theme === "dark" ? "#1A1A1A" : "#E6E6E6";
+  return `.preview-canvas { background: ${bg}; } .preview-empty { background: ${bg}; }`;
 }
 
 /**
  * Renders the MVP button preview in an open shadow root so edited `.icon-btn` / token CSS
  * does not collide with the host app, while keeping a real native button in normal tab order.
  *
- * Shadow DOM order: shell → user CSS → state overrides → React mount.
+ * Shadow DOM order: shell → user CSS → state overrides → theme → React mount.
  * State override CSS sits after user CSS so modifier classes always win the cascade.
  */
 export function LiveButtonPreview({
@@ -196,10 +202,12 @@ export function LiveButtonPreview({
   reactCode,
   selectedState = "default",
   hasLoadedCode = false,
+  previewTheme = "light",
 }: LiveButtonPreviewProps) {
 const hostRef = useRef<HTMLDivElement>(null);
 const userStyleRef = useRef<HTMLStyleElement | null>(null);
 const stateStyleRef = useRef<HTMLStyleElement | null>(null);
+const themeStyleRef = useRef<HTMLStyleElement | null>(null);
 const reactRootRef = useRef<Root | null>(null);
 
   useLayoutEffect(() => {
@@ -223,10 +231,15 @@ const reactRootRef = useRef<Root | null>(null);
       stateOverride.textContent = buildPreviewStateCss(cssCode);
       stateStyleRef.current = stateOverride;
 
+      const themeStyle = document.createElement("style");
+      themeStyle.setAttribute("data-preview-theme", "");
+      themeStyle.textContent = buildThemeCss(previewTheme);
+      themeStyleRef.current = themeStyle;
+
       const mount = document.createElement("div");
       mount.setAttribute("data-preview-mount", "");
 
-      shadow.append(shell, userStyle, stateOverride, mount);
+      shadow.append(shell, userStyle, stateOverride, themeStyle, mount);
       userStyleRef.current = userStyle;
       reactRootRef.current = createRoot(mount);
     }
@@ -236,6 +249,7 @@ const reactRootRef = useRef<Root | null>(null);
       reactRootRef.current = null;
       userStyleRef.current = null;
       stateStyleRef.current = null;
+      themeStyleRef.current = null;
       shadow.replaceChildren();
     };
   }, []);
@@ -249,6 +263,12 @@ useLayoutEffect(() => {
     stateStyleRef.current.textContent = buildPreviewStateCss(cssCode);
   }
 }, [cssCode]);
+
+useLayoutEffect(() => {
+  if (themeStyleRef.current) {
+    themeStyleRef.current.textContent = buildThemeCss(previewTheme);
+  }
+}, [previewTheme]);
 
   useLayoutEffect(() => {
     reactRootRef.current?.render(

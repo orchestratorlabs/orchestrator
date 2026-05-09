@@ -433,6 +433,7 @@ export function WorkspacePane({
     : null;
 
   const [selectedButtonState, setSelectedButtonState] = useState<ButtonPreviewState>("default");
+  const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
 
   const stateOptions: { value: ButtonPreviewState; label: string }[] = [
     { value: "default", label: "Default" },
@@ -515,8 +516,46 @@ export function WorkspacePane({
               </div>
             </div>
           )}
+          <div className="preview-theme-toggle" role="group" aria-label="Preview theme">
+            <button
+              type="button"
+              className={`preview-theme-toggle__button${previewTheme === "light" ? " preview-theme-toggle__button--active" : ""}`}
+              aria-label="Preview component in light mode"
+              aria-pressed={previewTheme === "light"}
+              onClick={() => setPreviewTheme("light")}
+            >
+              <span className="preview-theme-toggle__icon">
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="4"/>
+                  <line x1="12" y1="2" x2="12" y2="6"/>
+                  <line x1="12" y1="18" x2="12" y2="22"/>
+                  <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+                  <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+                  <line x1="2" y1="12" x2="6" y2="12"/>
+                  <line x1="18" y1="12" x2="22" y2="12"/>
+                  <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
+                  <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+                </svg>
+              </span>
+              Light
+            </button>
+            <button
+              type="button"
+              className={`preview-theme-toggle__button${previewTheme === "dark" ? " preview-theme-toggle__button--active" : ""}`}
+              aria-label="Preview component in dark mode"
+              aria-pressed={previewTheme === "dark"}
+              onClick={() => setPreviewTheme("dark")}
+            >
+              <span className="preview-theme-toggle__icon">
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              </span>
+              Dark
+            </button>
+          </div>
         </div>
-        <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} selectedState={selectedButtonState} hasLoadedCode={hasLoadedComponentCode} />
+        <LiveButtonPreview cssCode={cssCode} reactCode={reactCode} selectedState={selectedButtonState} hasLoadedCode={hasLoadedComponentCode} previewTheme={previewTheme} />
       </section>
 
       {hasLoadedComponentCode && <div className="editor-stack">
