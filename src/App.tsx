@@ -18,6 +18,7 @@ export function App() {
   );
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
   const [selectedFindingRuleId, setSelectedFindingRuleId] = useState<string | null>(null);
+  const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
 
   const handleLoadSample = async () => {
   setReactCode(SAMPLE_BUTTON_TSX);
@@ -74,7 +75,7 @@ export function App() {
       }),
     });
 
-    const data = await response.json();
+    await response.json();
 
     const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
     setEvaluationResult(result);
@@ -120,6 +121,8 @@ setEvaluationStateMessage(
           loadedComponentName={loadedComponentName}
           onLoadSample={handleLoadSample}
           onEvaluate={handleEvaluate}
+          previewTheme={previewTheme}
+          onPreviewThemeChange={setPreviewTheme}
         />
         <OrchestratorPanel
           isOpen={isPanelOpen}

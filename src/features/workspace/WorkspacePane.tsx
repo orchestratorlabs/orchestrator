@@ -83,6 +83,62 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
   line-height: 1;
 }`;
 
+const SAMPLE_CSS_DARK = `@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&display=swap");
+
+:root {
+  --Corner-M: 0.5rem;
+  --Bg-Brand: #8DB6FF;
+  --Bg-Brand-Hover: #5E97FF;
+  --Bg-Brand-Active: #367BF9;
+  --Text-On-Brand: #1A1A1A;
+  --Focus-Ring: #367BF9;
+  --Bg-Disabled: #D5D5D5;
+  --Text-Disabled: #595959;
+}
+
+.icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: var(--Corner-M, 0.5rem);
+  background: var(--Bg-Brand, #8DB6FF);
+  color: var(--Text-On-Brand, #1A1A1A);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Atkinson Hyperlegible Next", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.icon-btn:focus-visible {
+  outline: 3px solid var(--Focus-Ring, #367BF9);
+  outline-offset: 2px;
+}
+
+.icon-btn:hover {
+  background: var(--Bg-Brand-Hover, #5E97FF);
+}
+
+.icon-btn:active {
+  background: var(--Bg-Brand-Active, #367BF9);
+}
+
+.icon-btn:disabled {
+  background: var(--Bg-Disabled, #D5D5D5);
+  color: var(--Text-Disabled, #595959);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.icon-btn__icon {
+  font-size: 16px;
+  line-height: 1;
+}`;
+
 interface WorkspacePaneProps {
   reactCode: string;
   cssCode: string;
@@ -91,10 +147,12 @@ interface WorkspacePaneProps {
   evaluationResult: EvaluationResult | null;
   selectedFindingRuleId: string | null;
   isEvaluating: boolean;
+  previewTheme: "light" | "dark";
   onReactCodeChange: (value: string) => void;
   onCssCodeChange: (value: string) => void;
   onLoadSample: () => void;
   onEvaluate: () => void;
+  onPreviewThemeChange: (theme: "light" | "dark") => void;
 }
 
 type AnnotationStatus = Extract<RuleResult["status"], "Fail" | "Unknown">;
@@ -417,10 +475,12 @@ export function WorkspacePane({
   evaluationResult,
   selectedFindingRuleId,
   isEvaluating,
+  previewTheme,
   onReactCodeChange,
   onCssCodeChange,
   onLoadSample,
-  onEvaluate
+  onEvaluate,
+  onPreviewThemeChange,
 }: WorkspacePaneProps) {
   const annotations = useMemo(
     () => buildAnnotations(evaluationResult, reactCode, cssCode),
@@ -433,7 +493,6 @@ export function WorkspacePane({
     : null;
 
   const [selectedButtonState, setSelectedButtonState] = useState<ButtonPreviewState>("default");
-  const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
 
   const stateOptions: { value: ButtonPreviewState; label: string }[] = [
     { value: "default", label: "Default" },
@@ -522,7 +581,7 @@ export function WorkspacePane({
               className={`preview-theme-toggle__button${previewTheme === "light" ? " preview-theme-toggle__button--active" : ""}`}
               aria-label="Preview component in light mode"
               aria-pressed={previewTheme === "light"}
-              onClick={() => setPreviewTheme("light")}
+              onClick={() => onPreviewThemeChange("light")}
             >
               <span className="preview-theme-toggle__icon">
                 <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -544,7 +603,7 @@ export function WorkspacePane({
               className={`preview-theme-toggle__button${previewTheme === "dark" ? " preview-theme-toggle__button--active" : ""}`}
               aria-label="Preview component in dark mode"
               aria-pressed={previewTheme === "dark"}
-              onClick={() => setPreviewTheme("dark")}
+              onClick={() => onPreviewThemeChange("dark")}
             >
               <span className="preview-theme-toggle__icon">
                 <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -651,7 +710,8 @@ export function WorkspacePane({
                 ref={cssTextareaRef}
                 id="css-code-input"
                 className="code-input css"
-                value={cssCode}
+                value={previewTheme === "dark" ? SAMPLE_CSS_DARK : cssCode}
+                readOnly={previewTheme === "dark"}
                 onChange={(event) => onCssCodeChange(event.target.value)}
                 onScroll={(event) => setCssScrollTop(event.currentTarget.scrollTop)}
                 placeholder={SAMPLE_CSS}
@@ -691,3 +751,4 @@ export function WorkspacePane({
 
 export const SAMPLE_BUTTON_TSX = SAMPLE_TSX;
 export const SAMPLE_BUTTON_CSS = SAMPLE_CSS;
+export const SAMPLE_BUTTON_CSS_DARK = SAMPLE_CSS_DARK;
