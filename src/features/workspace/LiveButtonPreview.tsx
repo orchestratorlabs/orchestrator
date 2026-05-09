@@ -187,7 +187,40 @@ export interface LiveButtonPreviewProps {
 
 function buildThemeCss(theme: "light" | "dark"): string {
   const bg = theme === "dark" ? "#1A1A1A" : "#E6E6E6";
-  return `.preview-canvas { background: ${bg}; } .preview-empty { background: ${bg}; }`;
+  const base = `.preview-canvas { background: ${bg}; } .preview-empty { background: ${bg}; }`;
+
+  if (theme !== "dark") {
+    return base;
+  }
+
+  return `${base}
+
+.preview-canvas .icon-btn.icon-btn--default {
+  background: #8DB6FF;
+  color: #1A1A1A;
+}
+
+.preview-canvas .icon-btn.icon-btn--hover {
+  background: #5E97FF;
+  color: #1A1A1A;
+}
+
+.preview-canvas .icon-btn.icon-btn--active {
+  background: #367BF9;
+  color: #1A1A1A;
+}
+
+.preview-canvas .icon-btn.icon-btn--disabled {
+  background: #D5D5D5;
+  color: #595959;
+}
+
+.preview-canvas .icon-btn.icon-btn--focused {
+  background: #8DB6FF;
+  color: #1A1A1A;
+  outline: 3px solid #367BF9;
+  outline-offset: 2px;
+}`;
 }
 
 /**
