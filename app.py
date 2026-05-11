@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -328,9 +329,10 @@ def build_static_response(evaluation_context):
     pass_count = evaluation_context.get("passCount", 0)
     mode = evaluation_context.get("evaluatedMode", "unknown")
     findings = evaluation_context.get("findings", [])
+    mode_label = "Dark mode" if mode == "dark" else "Light mode" if mode == "light" else "The evaluated mode"
 
+    # --- Pass state ---
     if fail_count == 0 and score == 100:
-        mode_label = "Dark mode" if mode == "dark" else "Light mode" if mode == "light" else "The evaluated mode"
         passing_rules = [
             f.get("ruleName") or f.get("rule") or "rule"
             for f in findings
@@ -355,6 +357,63 @@ def build_static_response(evaluation_context):
                 "fail": [],
             },
             "recommendedFixes": [],
+        }
+        return answer, output_format
+
+    # --- Failure state ---
+    if fail_count > 0:
+        failing_findings = [f for f in findings if f.get("status") == "Fail"]
+
+        # Specific handler: text contrast failure (rule-5-text-contrast)
+        text_contrast_fail = next(
+            (f for f in failing_findings if f.get("ruleId") == "rule-5-text-contrast"),
+            None
+        )
+        if text_contrast_fail:
+            evidence = text_contrast_fail.get("evidence", "")
+            ratio_match = re.search(r"(\d+\.\d+):1", evidence)
+            ratio_str = f"{ratio_match.group(1)}:1" if ratio_match else "below 4.5:1"
+
+            answer = (
+                f"Disabled text contrast failed in {mode_label}. "
+                f"The likely failing token pair is --Text-Disabled and --Bg-Disabled. "
+                f"OrchestratoR measured a contrast ratio of {ratio_str}, which is below the WCAG 2.1 AA threshold of 4.5:1. "
+                f"The disabled text token is too light against the disabled background. "
+                f"The approved design-system value is #494949. "
+                f"Update --Text-Disabled to #494949, then rerun the accessibility check. "
+                f"If fixed, the score should move from {score}/100 to 100/100."
+            )
+            output_format = {
+                "accessibilityHealthScore": f"{score}/100 — disabled text contrast failing in {mode_label}.",
+                "summary": f"Disabled text contrast failed in {mode_label}: --Text-Disabled does not meet 4.5:1 against --Bg-Disabled. Approved fix: #494949.",
+                "findings": {
+                    "pass": [f.get("ruleName") or f.get("rule") or "rule" for f in findings if f.get("status") == "Pass"],
+                    "unknown": [f.get("ruleName") or f.get("rule") or "rule" for f in findings if f.get("status") == "Unknown"],
+                    "fail": [text_contrast_fail.get("ruleName") or "Text Contrast"],
+                },
+                "recommendedFixes": [
+                    "Update --Text-Disabled to #494949 (approved design-system value), then rerun the accessibility check."
+                ],
+            }
+            return answer, output_format
+
+        # Generic failure handler for other rules
+        failing_names = [f.get("ruleName") or f.get("rule") or "unknown rule" for f in failing_findings]
+        failing_recs = [f.get("recommendation", "") for f in failing_findings if f.get("recommendation")]
+        answer = (
+            f"{mode_label} has {fail_count} failing rule(s): {', '.join(failing_names)}. "
+            f"Current score: {score}/100. "
+            f"Review the findings and apply the recommended fixes, then rerun the accessibility check."
+        )
+        output_format = {
+            "accessibilityHealthScore": f"{score}/100 — {fail_count} rule(s) failing in {mode_label}.",
+            "summary": f"{mode_label} has {fail_count} failing accessibility rule(s): {', '.join(failing_names)}.",
+            "findings": {
+                "pass": [f.get("ruleName") or f.get("rule") or "rule" for f in findings if f.get("status") == "Pass"],
+                "unknown": [f.get("ruleName") or f.get("rule") or "rule" for f in findings if f.get("status") == "Unknown"],
+                "fail": failing_names,
+            },
+            "recommendedFixes": failing_recs,
         }
         return answer, output_format
 
