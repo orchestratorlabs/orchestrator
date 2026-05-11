@@ -105,9 +105,72 @@ def get_claude_model():
     return os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6").strip()
 
 
-def build_rag_prompt(question, component_type, registry_text, component_rag_text, component_context):
-    return f"""You are OrchestratoR, an accessibility co-pilot. Answer the user's accessibility question using only the RAG context provided below.
+def format_evaluation_context_block(evaluation_context):
+    """Return a formatted string block describing the current evaluation result."""
+    if not evaluation_context:
+        return "Not provided."
 
+    mode = evaluation_context.get("evaluatedMode", "unknown")
+    score = evaluation_context.get("score", "N/A")
+    pass_count = evaluation_context.get("passCount", 0)
+    unknown_count = evaluation_context.get("unknownCount", 0)
+    fail_count = evaluation_context.get("failCount", 0)
+    findings = evaluation_context.get("findings", [])
+
+    mode_label = "Dark mode" if mode == "dark" else "Light mode" if mode == "light" else mode
+
+    lines = [
+        f"Evaluated mode: {mode_label}",
+        f"Score: {score}/100",
+        f"Pass: {pass_count}",
+        f"Unknown: {unknown_count}",
+        f"Fail: {fail_count}",
+    ]
+    if findings:
+        lines.append("Findings:")
+        for f in findings:
+            rule = f.get("ruleName") or f.get("rule") or "Unknown rule"
+            status = f.get("status", "?")
+            evidence = f.get("evidence") or f.get("message") or ""
+            lines.append(f"  [{status}] {rule}: {evidence}")
+
+    return "\n".join(lines)
+
+
+def build_response_guidance(evaluation_context):
+    """Return explicit response guidance based on the current evaluation state."""
+    if not evaluation_context:
+        return ""
+
+    fail_count = evaluation_context.get("failCount", 0)
+    score = evaluation_context.get("score", 0)
+
+    if fail_count == 0 and score == 100:
+        return """
+RESPONSE GUIDANCE (PASS STATE):
+- The evaluation result shows ALL rules PASSED with a score of 100/100 and ZERO failures.
+- Answer this question by explaining WHY the evaluation passed.
+- Reference the specific passing findings listed in CURRENT EVALUATION RESULT.
+- Do NOT suggest fixes, remediation steps, or token changes — there are no failures.
+- Do NOT mention failure conditions or contrast issues as if they need to be resolved.
+- Use the evaluated mode name (e.g. "Dark mode") in your answer.
+"""
+    elif fail_count and fail_count > 0:
+        return """
+RESPONSE GUIDANCE (FAIL STATE):
+- The evaluation result shows one or more FAILURES.
+- Explain the failing rules and how to fix them.
+- Reference the specific failing findings listed in CURRENT EVALUATION RESULT.
+"""
+    return ""
+
+
+def build_rag_prompt(question, component_type, registry_text, component_rag_text, component_context, evaluation_context=None):
+    eval_block = format_evaluation_context_block(evaluation_context)
+    response_guidance = build_response_guidance(evaluation_context)
+
+    return f"""You are OrchestratoR, an accessibility co-pilot. Answer the user's accessibility question using only the RAG context provided below.
+{response_guidance}
 CRITICAL INSTRUCTIONS:
 - Your entire response must be a single valid JSON object.
 - Do NOT include any text before or after the JSON.
@@ -148,6 +211,10 @@ COMPONENT CONTEXT FROM EVALUATOR:
 {component_context or "Not provided."}
 
 ---
+CURRENT EVALUATION RESULT:
+{eval_block}
+
+---
 USER QUESTION:
 {question}
 
@@ -184,7 +251,7 @@ def parse_claude_json_response(raw_text):
     return json.loads(text)
 
 
-def call_claude(question, component_type, registry_text, component_rag_text, component_context):
+def call_claude(question, component_type, registry_text, component_rag_text, component_context, evaluation_context=None):
     """
     Call Claude with the RAG prompt.
     Returns (parsed_dict, api_mode, error_type, error_message).
@@ -195,7 +262,7 @@ def call_claude(question, component_type, registry_text, component_rag_text, com
         return None, "mock", None, None
 
     prompt = build_rag_prompt(
-        question, component_type, registry_text, component_rag_text, component_context
+        question, component_type, registry_text, component_rag_text, component_context, evaluation_context
     )
 
     raw = None
@@ -228,14 +295,14 @@ def call_claude(question, component_type, registry_text, component_rag_text, com
 # Static fallback response
 # ---------------------------------------------------------------------------
 
-STATIC_ANSWER = (
+STATIC_ANSWER_FAILURE = (
     "OrchestratoR loaded the backend RAG registry and button accessibility rule context. "
     "For disabled text contrast, compare the disabled label color against the disabled background color. "
     "If the contrast ratio is below the WCAG 2.1 text contrast threshold, update the disabled text color, "
     "rerun the checker, and confirm the finding changes from Fail to Pass."
 )
 
-STATIC_OUTPUT_FORMAT = {
+STATIC_OUTPUT_FORMAT_FAILURE = {
     "accessibilityHealthScore": "Use current evaluator score when available. If no score is provided, respond with guidance only.",
     "summary": "Disabled text contrast compares the disabled label color against the disabled button background color.",
     "findings": {
@@ -249,6 +316,49 @@ STATIC_OUTPUT_FORMAT = {
         "Update the disabled text color to a darker accessible value, rerun the checker, and confirm the finding changes from Fail to Pass."
     ],
 }
+
+
+def build_static_response(evaluation_context):
+    """Return (answer, output_format) appropriate for the current evaluation state."""
+    if not evaluation_context:
+        return STATIC_ANSWER_FAILURE, STATIC_OUTPUT_FORMAT_FAILURE
+
+    fail_count = evaluation_context.get("failCount", 0)
+    score = evaluation_context.get("score", 0)
+    pass_count = evaluation_context.get("passCount", 0)
+    mode = evaluation_context.get("evaluatedMode", "unknown")
+    findings = evaluation_context.get("findings", [])
+
+    if fail_count == 0 and score == 100:
+        mode_label = "Dark mode" if mode == "dark" else "Light mode" if mode == "light" else "The evaluated mode"
+        passing_rules = [
+            f.get("ruleName") or f.get("rule") or "rule"
+            for f in findings
+            if f.get("status") == "Pass"
+        ]
+        rules_summary = ", ".join(passing_rules) if passing_rules else f"all {pass_count} evaluated rules"
+
+        answer = (
+            f"{mode_label} passed because all {pass_count} evaluated button accessibility rules passed "
+            f"with no known failures. The {mode_label} tokens provide sufficient contrast across the "
+            f"tested button states, including default, hover, active, disabled, and focused. "
+            f"The disabled text token meets the required contrast against the disabled background, "
+            f"and the focus styling remains visible. "
+            f"Passing rules: {rules_summary}."
+        )
+        output_format = {
+            "accessibilityHealthScore": f"{score}/100 — all rules passed.",
+            "summary": f"{mode_label} passed all {pass_count} button accessibility rules with no failures.",
+            "findings": {
+                "pass": [f.get("ruleName") or f.get("rule") or "rule" for f in findings if f.get("status") == "Pass"],
+                "unknown": [],
+                "fail": [],
+            },
+            "recommendedFixes": [],
+        }
+        return answer, output_format
+
+    return STATIC_ANSWER_FAILURE, STATIC_OUTPUT_FORMAT_FAILURE
 
 
 # ---------------------------------------------------------------------------
@@ -334,6 +444,7 @@ def rag_query():
     component_context = data.get("componentContext", "")
     component_type = data.get("componentType", "button")
     use_claude = data.get("useClaude", False)
+    evaluation_context = data.get("evaluationContext", None)
 
     registry_text = load_rag_file(RAG_REGISTRY_FILE)
     if not registry_text:
@@ -355,10 +466,12 @@ def rag_query():
     registry_preview = registry_text[:500]
     rag_preview = component_rag_text[:1200]
 
+    static_answer, static_output_format = build_static_response(evaluation_context)
+
     # --- Claude path ---
     if use_claude:
         call_result = call_claude(
-            question, component_type, registry_text, component_rag_text, component_context
+            question, component_type, registry_text, component_rag_text, component_context, evaluation_context
         )
         # Success returns 4-tuple; parse/API errors return 5-tuple with raw_preview
         parsed, api_mode, error_type, error_message = call_result[:4]
@@ -380,11 +493,11 @@ def rag_query():
                 "componentContext": component_context,
                 "registryPreview": registry_preview,
                 "ragPreview": rag_preview,
-                "answer": STATIC_ANSWER,
+                "answer": static_answer,
                 "apiMode": "error",
                 "claudeErrorType": error_type,
                 "claudeErrorMessage": error_message,
-                "outputFormat": STATIC_OUTPUT_FORMAT,
+                "outputFormat": static_output_format,
             }
             if raw_preview is not None:
                 error_body["claudeRawPreview"] = raw_preview
@@ -399,9 +512,9 @@ def rag_query():
         "componentContext": component_context,
         "registryPreview": registry_preview,
         "ragPreview": rag_preview,
-        "answer": STATIC_ANSWER,
+        "answer": static_answer,
         "apiMode": api_mode,
-        "outputFormat": STATIC_OUTPUT_FORMAT,
+        "outputFormat": static_output_format,
     })
 
 

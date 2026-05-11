@@ -48,6 +48,14 @@ export function OrchestratorPanel({
         body: JSON.stringify({
           question: ragQuestion,
           componentContext: evaluationStateMessage,
+          evaluationContext: {
+            evaluatedMode,
+            score: healthScore,
+            passCount,
+            unknownCount,
+            failCount,
+            findings: evaluationResult?.findings ?? [],
+          },
         }),
       });
 
