@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MVP_SCORING_POLICY } from "../types/evaluation";
 import type { EvaluationResult } from "../types/evaluation";
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
 
@@ -9,6 +8,7 @@ interface OrchestratorPanelProps {
   evaluationResult: EvaluationResult | null;
   selectedFindingRuleId: string | null;
   onSelectFinding: (ruleId: string) => void;
+  evaluatedMode: "light" | "dark" | null;
 }
 
 export function OrchestratorPanel({
@@ -16,7 +16,8 @@ export function OrchestratorPanel({
   evaluationStateMessage,
   evaluationResult,
   selectedFindingRuleId,
-  onSelectFinding
+  onSelectFinding,
+  evaluatedMode,
 }: OrchestratorPanelProps) {
   const healthScore = evaluationResult?.healthScore ?? 0;
   const scoreRatio = Math.max(0, Math.min(healthScore, 100)) / 100;
@@ -104,10 +105,14 @@ export function OrchestratorPanel({
             </div>
           </div>
           <div className="score-meta">
-            <p className="score-note">{evaluationStateMessage}</p>
             <p className="muted score-policy">
-              Score type: {evaluationResult?.scoringPolicyLabel ?? MVP_SCORING_POLICY.name}
+              Evaluation method: Button accessibility rules
             </p>
+            {evaluatedMode && (
+              <p className="muted score-evaluated-mode">
+                Evaluated: {evaluatedMode === "dark" ? "Dark mode" : "Light mode"}
+              </p>
+            )}
             {evaluationResult && (
               <ul className="score-status-legend" aria-label="Rule status distribution">
                 <li>
@@ -166,8 +171,8 @@ export function OrchestratorPanel({
 
         {ragAnswer ? (
           <div className="rag-response">
-            <h4>RAG Response</h4>
-            <p>{ragAnswer}</p>
+            <h4>Response</h4>
+            <p>{ragAnswer.replace("OrchestratoR loaded the backend RAG registry and button accessibility rule context.", "").trimStart()}</p>
           </div>
         ) : null}
       </section>

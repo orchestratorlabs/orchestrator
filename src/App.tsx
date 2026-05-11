@@ -1,7 +1,7 @@
 import { TopBar } from "./features/orchestrator/components/TopBar";
 import { OrchestratorPanel } from "./features/orchestrator/components/OrchestratorPanel";
 import { useOrchestratorState } from "./features/orchestrator/state/orchestratorState";
-import { SAMPLE_BUTTON_CSS, SAMPLE_BUTTON_TSX, WorkspacePane } from "./features/workspace/WorkspacePane";
+import { SAMPLE_BUTTON_CSS, SAMPLE_BUTTON_CSS_DARK, SAMPLE_BUTTON_TSX, WorkspacePane } from "./features/workspace/WorkspacePane";
 import { useState } from "react";
 import { evaluateButtonAccessibility } from "./features/orchestrator/evaluator/buttonEvaluator";
 import type { EvaluationResult } from "./features/orchestrator/types/evaluation";
@@ -19,6 +19,19 @@ export function App() {
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
   const [selectedFindingRuleId, setSelectedFindingRuleId] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
+  const [evaluatedMode, setEvaluatedMode] = useState<"light" | "dark" | null>(null);
+
+  const handlePreviewThemeChange = (theme: "light" | "dark") => {
+    setPreviewTheme(theme);
+    setEvaluationResult(null);
+    setSelectedFindingRuleId(null);
+    setEvaluatedMode(null);
+    if (hasLoadedComponentCode) {
+      setEvaluationStateMessage(
+        "Preview mode changed. Run accessibility check to evaluate the current token set."
+      );
+    }
+  };
 
   const handleLoadSample = async () => {
   setReactCode(SAMPLE_BUTTON_TSX);
@@ -56,11 +69,13 @@ export function App() {
   if (!hasLoadedComponentCode) return;
 
   const currentReactCode = reactCode;
-  const currentCssCode = cssCode;
+  const currentMode = previewTheme;
+  const currentCssCode = currentMode === "dark" ? SAMPLE_BUTTON_CSS_DARK : cssCode;
 
   setIsEvaluating(true);
   setSelectedFindingRuleId(null);
   setEvaluationResult(null);
+  setEvaluatedMode(null);
   setEvaluationStateMessage("Sending component code to mock LLM accessibility reviewer...");
 
   try {
@@ -79,15 +94,16 @@ export function App() {
 
     const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
     setEvaluationResult(result);
+    setEvaluatedMode(currentMode);
 
- const passCount = result.findings.filter((f) => f.status === "Pass").length;
- const failCount = result.findings.filter((f) => f.status === "Fail").length;
- const unknownCount = result.unknownCount;
- const scoreValue = result.healthScore;
+    const passCount = result.findings.filter((f) => f.status === "Pass").length;
+    const failCount = result.findings.filter((f) => f.status === "Fail").length;
+    const unknownCount = result.unknownCount;
+    const scoreValue = result.healthScore;
 
-setEvaluationStateMessage(
-  `Mock LLM complete: ${scoreValue}/100 — Score ${scoreValue}/100 with ${passCount} pass, ${unknownCount} unknown, and ${failCount} fail findings.`
-);
+    setEvaluationStateMessage(
+      `Complete: ${scoreValue}/100 — Score ${scoreValue}/100 with ${passCount} pass, ${unknownCount} unknown, and ${failCount} fail findings.`
+    );
   } catch (error) {
     setEvaluationStateMessage(
       "Mock LLM request failed. Running local accessibility check instead."
@@ -95,6 +111,7 @@ setEvaluationStateMessage(
 
     const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
     setEvaluationResult(result);
+    setEvaluatedMode(currentMode);
   } finally {
     setIsEvaluating(false);
   }
@@ -122,7 +139,7 @@ setEvaluationStateMessage(
           onLoadSample={handleLoadSample}
           onEvaluate={handleEvaluate}
           previewTheme={previewTheme}
-          onPreviewThemeChange={setPreviewTheme}
+          onPreviewThemeChange={handlePreviewThemeChange}
         />
         <OrchestratorPanel
           isOpen={isPanelOpen}
@@ -130,6 +147,7 @@ setEvaluationStateMessage(
           evaluationResult={evaluationResult}
           selectedFindingRuleId={selectedFindingRuleId}
           onSelectFinding={setSelectedFindingRuleId}
+          evaluatedMode={evaluatedMode}
         />
       </main>
     </div>
