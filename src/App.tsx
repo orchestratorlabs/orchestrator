@@ -119,7 +119,7 @@ export function App() {
 
   return (
     <div className="app-root">
-      <TopBar onTogglePanel={togglePanel} />
+      <TopBar />
       <main className="main-layout">
         <nav className="utility-rail" aria-label="Utility navigation">
           <button type="button">Files</button>
@@ -140,6 +140,7 @@ export function App() {
           onEvaluate={handleEvaluate}
           previewTheme={previewTheme}
           onPreviewThemeChange={handlePreviewThemeChange}
+          onTogglePanel={togglePanel}
         />
         <OrchestratorPanel
           isOpen={isPanelOpen}

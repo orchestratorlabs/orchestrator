@@ -153,6 +153,7 @@ interface WorkspacePaneProps {
   onLoadSample: () => void;
   onEvaluate: () => void;
   onPreviewThemeChange: (theme: "light" | "dark") => void;
+  onTogglePanel: () => void;
 }
 
 type AnnotationStatus = Extract<RuleResult["status"], "Fail" | "Unknown">;
@@ -481,6 +482,7 @@ export function WorkspacePane({
   onLoadSample,
   onEvaluate,
   onPreviewThemeChange,
+  onTogglePanel,
 }: WorkspacePaneProps) {
   const annotations = useMemo(
     () => buildAnnotations(evaluationResult, reactCode, cssCode),
@@ -540,15 +542,67 @@ export function WorkspacePane({
         <button type="button" className="load-component-btn" onClick={onLoadSample}>
           Load Component Code
         </button>
-        <button
-          type="button"
-          className="evaluate-btn"
-          onClick={onEvaluate}
-          disabled={isEvaluating || !hasLoadedComponentCode}
-          title={!hasLoadedComponentCode ? "Load component code first" : undefined}
-        >
-          {isEvaluating ? "Evaluating..." : "Run Accessibility Check"}
-        </button>
+        <div className="workspace-toolbar__actions">
+          {!hasLoadedComponentCode ? (
+            <div className="orchestrator-btn-wrap">
+              <button
+                type="button"
+                className="workspace-action-btn orchestrator-btn"
+                aria-describedby="orchestrator-btn-tooltip"
+                onClick={onTogglePanel}
+              >
+                Open OrchestratoR
+              </button>
+              <span
+                id="orchestrator-btn-tooltip"
+                role="tooltip"
+                className="a11y-tooltip"
+              >
+                Load component code before running OrchestratoR checks.
+              </span>
+            </div>
+          ) : (
+            <button type="button" className="workspace-action-btn orchestrator-btn" onClick={onTogglePanel}>
+              Open OrchestratoR
+            </button>
+          )}
+          <button
+            type="button"
+            className="workspace-action-btn evaluate-btn"
+            onClick={onEvaluate}
+            disabled={isEvaluating || !hasLoadedComponentCode}
+          >
+            {isEvaluating ? "Evaluating..." : "Run Accessibility Check"}
+          </button>
+          {evaluationResult !== null ? (
+            <button
+              type="button"
+              className="workspace-action-btn a11y-doublecheck-btn"
+              onClick={() => console.log("A11Y DoubleCheck clicked")}
+            >
+              Run A11Y DoubleCheck
+            </button>
+          ) : (
+            <div className="a11y-doublecheck-wrap">
+              <button
+                type="button"
+                className="workspace-action-btn a11y-doublecheck-btn a11y-doublecheck-btn--inactive"
+                aria-disabled="true"
+                aria-describedby="a11y-doublecheck-tooltip"
+                onClick={(e) => e.preventDefault()}
+              >
+                Run A11Y DoubleCheck
+              </button>
+              <span
+                id="a11y-doublecheck-tooltip"
+                role="tooltip"
+                className="a11y-tooltip"
+              >
+                Run this Agent after the Accessibility Check.
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       <section className="editor-block preview-block">

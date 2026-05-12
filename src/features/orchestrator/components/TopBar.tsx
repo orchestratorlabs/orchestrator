@@ -1,8 +1,4 @@
-interface TopBarProps {
-  onTogglePanel: () => void;
-}
-
-export function TopBar({ onTogglePanel }: TopBarProps) {
+export function TopBar() {
   return (
     <header className="top-bar">
       <input
@@ -12,9 +8,6 @@ export function TopBar({ onTogglePanel }: TopBarProps) {
         aria-label="Search"
       />
       <div className="top-actions">
-        <button type="button" className="icon-btn orchestrator-btn" onClick={onTogglePanel}>
-          OrchestratoR
-        </button>
         <button type="button" className="icon-btn" aria-label="Profile">
           Admin
         </button>
