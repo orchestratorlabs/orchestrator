@@ -154,6 +154,9 @@ interface WorkspacePaneProps {
   onEvaluate: () => void;
   onPreviewThemeChange: (theme: "light" | "dark") => void;
   onTogglePanel: () => void;
+  onA11yDoubleCheck: () => void;
+  isDoubleChecking: boolean;
+  a11yDoubleCheckError: string | null;
 }
 
 type AnnotationStatus = Extract<RuleResult["status"], "Fail" | "Unknown">;
@@ -483,6 +486,9 @@ export function WorkspacePane({
   onEvaluate,
   onPreviewThemeChange,
   onTogglePanel,
+  onA11yDoubleCheck,
+  isDoubleChecking,
+  a11yDoubleCheckError,
 }: WorkspacePaneProps) {
   const annotations = useMemo(
     () => buildAnnotations(evaluationResult, reactCode, cssCode),
@@ -578,9 +584,10 @@ export function WorkspacePane({
             <button
               type="button"
               className="workspace-action-btn a11y-doublecheck-btn"
-              onClick={() => console.log("A11Y DoubleCheck clicked")}
+              onClick={onA11yDoubleCheck}
+              disabled={isDoubleChecking}
             >
-              Run A11Y DoubleCheck
+              {isDoubleChecking ? "Running DoubleCheck…" : "Run A11Y DoubleCheck"}
             </button>
           ) : (
             <div className="a11y-doublecheck-wrap">
@@ -603,6 +610,11 @@ export function WorkspacePane({
             </div>
           )}
         </div>
+        {a11yDoubleCheckError && (
+          <div className="a11y-doublecheck-error" role="alert">
+            {a11yDoubleCheckError}
+          </div>
+        )}
       </div>
 
       <section className="editor-block preview-block">

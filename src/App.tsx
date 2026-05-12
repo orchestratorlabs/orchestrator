@@ -20,6 +20,9 @@ export function App() {
   const [selectedFindingRuleId, setSelectedFindingRuleId] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
   const [evaluatedMode, setEvaluatedMode] = useState<"light" | "dark" | null>(null);
+  const [isDoubleChecking, setIsDoubleChecking] = useState(false);
+  const [a11yDoubleCheckXmlResult, setA11yDoubleCheckXmlResult] = useState<string | null>(null);
+  const [a11yDoubleCheckError, setA11yDoubleCheckError] = useState<string | null>(null);
 
   const handlePreviewThemeChange = (theme: "light" | "dark") => {
     setPreviewTheme(theme);
@@ -117,6 +120,38 @@ export function App() {
   }
 };
 
+  const handleA11yDoubleCheck = async () => {
+    if (!evaluationResult) return;
+
+    const currentCssCode = previewTheme === "dark" ? SAMPLE_BUTTON_CSS_DARK : cssCode;
+
+    setIsDoubleChecking(true);
+    setA11yDoubleCheckError(null);
+
+    try {
+      const response = await fetch("http://localhost:5001/a11y-doublecheck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          componentCode: reactCode,
+          cssCode: currentCssCode,
+          selectedThemeMode: previewTheme,
+          accessibilityFindings: JSON.stringify(evaluationResult.findings),
+          recommendedFix: evaluationResult.recommendedFixes.join("; ") || "no_fix",
+        }),
+      });
+
+      const data = await response.json();
+      console.log("A11Y DoubleCheck response:", data);
+      setA11yDoubleCheckXmlResult(data.xmlResult ?? null);
+    } catch (error) {
+      console.error("A11Y DoubleCheck error:", error);
+      setA11yDoubleCheckError("A11Y DoubleCheck request failed.");
+    } finally {
+      setIsDoubleChecking(false);
+    }
+  };
+
   return (
     <div className="app-root">
       <TopBar />
@@ -140,6 +175,9 @@ export function App() {
           previewTheme={previewTheme}
           onPreviewThemeChange={handlePreviewThemeChange}
           onTogglePanel={togglePanel}
+          onA11yDoubleCheck={handleA11yDoubleCheck}
+          isDoubleChecking={isDoubleChecking}
+          a11yDoubleCheckError={a11yDoubleCheckError}
         />
         <OrchestratorPanel
           isOpen={isPanelOpen}
