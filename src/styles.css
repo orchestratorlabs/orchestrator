@@ -1031,13 +1031,6 @@ body {
 .doublecheck-card--partial { border-left-color: #c9a227; }
 .doublecheck-card--fail  { border-left-color: #e45858; }
 
-.doublecheck-debug-confirm {
-  font-size: 11px;
-  color: #4f8cff;
-  margin: 0 0 8px;
-  font-style: italic;
-}
-
 .doublecheck-meta {
   display: flex;
   flex-direction: column;

@@ -100,8 +100,6 @@ export function OrchestratorPanel({
         <section className={`panel-card doublecheck-card doublecheck-card--${a11yDoubleCheckResult.status.toLowerCase()}`}>
           <h3>A11Y DoubleCheck</h3>
 
-          <p className="doublecheck-debug-confirm">A11Y DoubleCheck result loaded</p>
-
           <div className="doublecheck-meta">
             <span className={`doublecheck-status ${STATUS_CLASS[a11yDoubleCheckResult.status]}`}>
               Status: {STATUS_LABEL[a11yDoubleCheckResult.status]}
