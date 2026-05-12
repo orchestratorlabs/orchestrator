@@ -1,0 +1,181 @@
+========================================
+RAG DOCUMENT HEADER
+========================================
+id: a11y_doublecheck_output_format_v1
+file_name: a11y_doublecheck_output_format.txt
+type: output_format_spec
+title: A11Y DoubleCheck Output Format Specification
+author: Craig Maher
+product: OrchestratoR
+version: 1.0
+phase: Phase 3
+language: English
+intended_use: >
+  Define the exact XML output format that A11Y DoubleCheck must return
+  for every validation run. The agent must conform to this schema
+  without deviation. No prose outside the XML block is permitted.
+
+========================================
+OUTPUT RULES
+========================================
+- A11Y DoubleCheck must return only the XML block defined in this schema.
+- No introductory sentences, explanatory prose, or markdown outside the XML.
+- All fields are required. Use empty tags only if no content applies.
+- status must be one of: PASS | FAIL | PARTIAL
+- ship_readiness must be one of: Ship Ready | Ship With Caution | Do Not Ship
+- confidence_score must be an integer between 0 and 100.
+- sources_checked must list only trusted W3C/WAI URLs. No other domains.
+- verified_items and remaining_risks use nested item elements.
+- recommended_next_step must be a single actionable instruction for the engineer.
+
+========================================
+# ====== SCHEMA ======
+========================================
+
+<a11y_doublecheck_result>
+
+  <!-- Overall validation status for this run -->
+  <status>PASS | FAIL | PARTIAL</status>
+
+  <!-- Integer 0–100. Reflects strength of evidence supporting the verdict.
+       90–100: Strong W3C/WAI evidence confirmed all checks.
+       70–89:  Evidence confirmed primary checks; minor gaps remain.
+       Below 70: Insufficient evidence or one or more criteria failed. -->
+  <confidence_score>0</confidence_score>
+
+  <!-- Engineer-facing ship decision -->
+  <!-- Ship Ready: all criteria pass, confidence >= 90 -->
+  <!-- Ship With Caution: primary criteria pass, confidence 70–89, risks noted -->
+  <!-- Do Not Ship: one or more criteria fail, confidence < 70 -->
+  <ship_readiness>Ship Ready | Ship With Caution | Do Not Ship</ship_readiness>
+
+  <!-- One to three sentence plain-language summary of the validation verdict.
+       Must state what was checked, what passed or failed, and the overall signal. -->
+  <summary></summary>
+
+  <!-- List of W3C/WAI URLs consulted during web lookup validation.
+       Only trusted sources from a11y_doublecheck_registry.txt are permitted. -->
+  <sources_checked>
+    <source>https://www.w3.org/TR/WCAG21/#criterion-id</source>
+  </sources_checked>
+
+  <!-- Summary of the web-lookup evidence that supports the verdict.
+       Cite the specific WCAG language or technique that applies.
+       Do not paraphrase in a way that changes the normative meaning. -->
+  <evidence_summary></evidence_summary>
+
+  <!-- Each WCAG criterion that was validated and passed -->
+  <verified_items>
+    <item>
+      <criterion>WCAG X.X.X Title</criterion>
+      <result>PASS</result>
+      <detail>Specific token values, contrast ratios, or code patterns that passed.</detail>
+    </item>
+  </verified_items>
+
+  <!-- Each risk, gap, or criterion that did not fully pass.
+       Required even if status is PASS — use empty tag if no risks exist. -->
+  <remaining_risks>
+    <item>
+      <criterion>WCAG X.X.X Title</criterion>
+      <risk>Description of the remaining risk or failure.</risk>
+      <recommended_fix>Specific token value, code change, or ARIA addition needed.</recommended_fix>
+    </item>
+  </remaining_risks>
+
+  <!-- Single most important action the engineer should take next.
+       If Ship Ready: confirm and ship.
+       If Ship With Caution: describe what to monitor or recheck.
+       If Do Not Ship: describe the blocking issue to resolve first. -->
+  <recommended_next_step></recommended_next_step>
+
+</a11y_doublecheck_result>
+
+========================================
+FIELD DEFINITIONS
+========================================
+
+status:
+  type: enum
+  values:
+    - PASS: All validated WCAG criteria pass for this component in this theme mode.
+    - FAIL: One or more validated WCAG criteria fail. Do not ship.
+    - PARTIAL: Some criteria pass but evidence was insufficient to confirm all checks.
+              Treat as Ship With Caution unless confidence score is below 70.
+
+confidence_score:
+  type: integer
+  range: 0–100
+  scoring_guidance:
+    - 90–100: W3C/WAI evidence directly confirms all checks. Specific contrast ratios
+              verified, keyboard behavior confirmed, ARIA patterns validated.
+    - 70–89:  Evidence confirms primary checks. One or more advisory items are
+              unconfirmed but do not represent blocking failures.
+    - 50–69:  Evidence is partial. Web lookup returned limited results or some
+              criteria could not be fully confirmed. Treat as a risk signal.
+    - Below 50: Evidence is insufficient or contradictory. Do not ship without
+                further review.
+
+ship_readiness:
+  type: enum
+  values:
+    - Ship Ready: Maps to confidence >= 90 and status PASS.
+    - Ship With Caution: Maps to confidence 70–89 or status PARTIAL.
+    - Do Not Ship: Maps to confidence < 70 or status FAIL.
+
+sources_checked:
+  type: list of URLs
+  constraint: Only W3C and WAI canonical URLs from a11y_doublecheck_registry.txt.
+  examples:
+    - https://www.w3.org/TR/WCAG21/#contrast-minimum
+    - https://www.w3.org/TR/WCAG21/#non-text-contrast
+    - https://www.w3.org/TR/WCAG21/#keyboard
+    - https://www.w3.org/TR/WCAG21/#focus-visible
+    - https://www.w3.org/TR/WCAG21/#name-role-value
+    - https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
+    - https://www.w3.org/WAI/ARIA/apg/patterns/button/
+
+evidence_summary:
+  type: string
+  guidance: >
+    Quote or closely paraphrase the normative W3C language that applies.
+    Include specific contrast ratios where relevant.
+    Do not invent thresholds or cite non-normative opinions.
+
+verified_items:
+  type: list of item elements
+  each_item_fields:
+    criterion: WCAG criterion ID and title (e.g. "WCAG 1.4.3 Contrast (Minimum)")
+    result: PASS (this list contains only passing items)
+    detail: Specific evidence — token name, computed value, ratio, or code element.
+
+remaining_risks:
+  type: list of item elements
+  each_item_fields:
+    criterion: WCAG criterion ID and title
+    risk: Description of the gap or failure found.
+    recommended_fix: The exact remediation the engineer should apply.
+  guidance: >
+    If no risks remain, include an empty <remaining_risks/> tag.
+    Do not omit the element entirely.
+
+recommended_next_step:
+  type: string
+  guidance: >
+    One sentence. Actionable. Engineer-facing.
+    If Ship Ready: "All checks pass — this component is ready to ship."
+    If Ship With Caution: "Review [specific risk] before shipping; primary criteria pass."
+    If Do Not Ship: "Resolve [specific failure] before shipping — see remaining_risks."
+
+========================================
+PROHIBITED OUTPUT PATTERNS
+========================================
+The following output patterns are not permitted:
+
+- Any text before the opening <a11y_doublecheck_result> tag.
+- Any text after the closing </a11y_doublecheck_result> tag.
+- Markdown formatting inside the XML (no **, no #, no ``).
+- URLs from non-trusted sources inside <sources_checked>.
+- Invented contrast ratios or thresholds not grounded in W3C normative text.
+- Combining multiple theme mode results into a single XML block.
+  Each theme mode (Light, Dark) requires a separate validation run and XML block.

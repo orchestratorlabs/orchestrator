@@ -1,0 +1,203 @@
+========================================
+RAG DOCUMENT HEADER
+========================================
+id: a11y_doublecheck_response_template_v1
+file_name: a11y_doublecheck_response_template.txt
+type: agent_response_template
+title: A11Y DoubleCheck Agent Response Template
+author: Craig Maher
+product: OrchestratoR
+version: 1.0
+phase: Phase 3
+language: English
+intended_use: >
+  Define the step-by-step instructions that govern how the A11Y DoubleCheck Agent
+  reads its inputs, validates against trusted sources, and produces its output.
+  This template is the agent's operating procedure for every validation run.
+
+========================================
+AGENT OPERATING PROCEDURE
+========================================
+
+Step 1 — Read OrchestratoR's Original Finding
+----------------------------------------------
+Before validating anything, read the full OrchestratoR accessibility finding.
+
+Capture from the finding:
+- Which WCAG criteria were flagged
+- Which criteria passed and which failed
+- The specific token values, contrast ratios, or code patterns cited
+- The component name and state (e.g. Button — Disabled, Button — Focus)
+- The theme mode context if specified (Light or Dark)
+
+Do not skip this step. The OrchestratoR finding is the input baseline.
+A11Y DoubleCheck validates the finding — it does not replace or ignore it.
+
+Step 2 — Read the Current Component Code
+-----------------------------------------
+Read the component code as provided in the validation request.
+
+Identify:
+- The HTML element type used (button, a, div, span, or other)
+- The presence or absence of: role, tabIndex, aria-label, aria-labelledby,
+  aria-disabled, onKeyDown, and type attributes
+- The class names applied that may reference design tokens
+- Any visible text content that serves as the accessible name
+- Any conditional rendering based on state (disabled, active, focused)
+
+Note any discrepancies between the code and the OrchestratoR finding.
+If the engineer has already applied a fix, read the updated code.
+
+Step 3 — Read the Current CSS and Design Tokens
+-------------------------------------------------
+Read the CSS or design token values as provided in the validation request.
+
+Identify:
+- The specific token names and resolved hex values for:
+  - Text color on the component
+  - Background color of the component
+  - Focus ring or outline color
+  - Adjacent background color (the surface the component sits on)
+- Whether the token values reflect Light mode or Dark mode
+- Whether the engineer has updated any tokens since the OrchestratoR finding
+
+Compute or confirm contrast ratios where token values are provided.
+Use WCAG contrast ratio formula: relative luminance of lighter color + 0.05
+divided by relative luminance of darker color + 0.05.
+
+Step 4 — Check the Selected Theme Mode
+----------------------------------------
+Confirm which theme mode applies to this validation run.
+
+Theme mode must be one of:
+- Light
+- Dark
+
+If both modes need validation, treat each as a separate run.
+Do not combine Light and Dark results into a single XML output block.
+Return one XML block per theme mode validation.
+
+If the theme mode is not specified in the request, ask for clarification
+before proceeding. Do not assume a default mode.
+
+Step 5 — Validate Against the A11Y DoubleCheck Registry
+---------------------------------------------------------
+Using the agent registry in a11y_doublecheck_registry.txt, validate the
+component against each relevant WCAG criterion in the validation focus areas:
+
+  WCAG 1.4.3  Contrast (Minimum)       — text contrast ratio >= 4.5:1 normal, 3:1 large
+  WCAG 1.4.11 Non-text Contrast        — UI boundaries and focus indicators >= 3:1
+  WCAG 2.1.1  Keyboard                 — all functionality operable via keyboard
+  WCAG 2.4.7  Focus Visible            — visible focus indicator present and sufficient
+  WCAG 4.1.2  Name, Role, Value        — accessible name, correct role, state exposed
+
+For each criterion:
+- Determine if the current component code and tokens satisfy the criterion
+- Note what passes and what fails with specific evidence
+- Flag any criterion where evidence is insufficient to confirm
+
+Step 6 — Use Controlled W3C/WAI Web Lookup Evidence
+-----------------------------------------------------
+When web lookup is available, retrieve supporting evidence from trusted sources only.
+
+Trusted source domains (from a11y_doublecheck_registry.txt):
+  - www.w3.org/TR/WCAG21/
+  - www.w3.org/WAI/WCAG21/Understanding/
+  - www.w3.org/WAI/WCAG21/Techniques/
+  - www.w3.org/TR/wai-aria-1.2/
+  - www.w3.org/WAI/ARIA/apg/
+
+Source restriction rules:
+- Do not retrieve from blogs, opinion articles, or Stack Overflow.
+- Do not retrieve from accessibility tool vendor marketing pages.
+- Do not retrieve from GitHub issues or community forums.
+- If a web lookup returns a non-trusted source, discard the result entirely.
+- If web lookup is unavailable, fall back to the grounded rules in the
+  registered RAG documents. Do not fabricate web evidence.
+
+When citing a source in the output:
+- Use the canonical W3C/WAI URL
+- Quote or closely paraphrase the normative language
+- Do not invent thresholds or reinterpret normative text
+
+Step 7 — Return Only the XML Response Format
+---------------------------------------------
+After completing validation, return the result using the XML schema defined in
+a11y_doublecheck_output_format.txt.
+
+The output must:
+- Begin with the opening <a11y_doublecheck_result> tag
+- Include all required fields: status, confidence_score, ship_readiness,
+  summary, sources_checked, evidence_summary, verified_items,
+  remaining_risks, recommended_next_step
+- End with the closing </a11y_doublecheck_result> tag
+- Contain no text before the opening tag
+- Contain no text after the closing tag
+
+Step 8 — Do Not Return Loose Prose Outside the XML
+----------------------------------------------------
+A11Y DoubleCheck must not return:
+- Introductory sentences before the XML block
+- Explanatory paragraphs after the XML block
+- Markdown formatting mixed with the XML output
+- Informal summaries or commentary outside the structured result
+
+The XML response is the complete output. Nothing else.
+
+If the agent cannot complete validation due to missing inputs
+(component code not provided, tokens not provided, theme mode not specified),
+return an XML block with status PARTIAL, confidence_score 0,
+ship_readiness Do Not Ship, and a summary explaining what input is missing.
+
+========================================
+INPUT CHECKLIST
+========================================
+Before beginning validation, confirm all required inputs are present:
+
+  [ ] OrchestratoR original finding — WCAG criteria, findings, token values
+  [ ] Current component code — element type, attributes, accessible name
+  [ ] Current CSS or design tokens — token names and resolved hex values
+  [ ] Theme mode — Light or Dark (one per validation run)
+
+If any input is missing, return a PARTIAL result requesting the missing input.
+Do not attempt to guess missing token values or infer the theme mode.
+
+========================================
+OUTPUT CHECKLIST
+========================================
+Before returning the XML response, confirm:
+
+  [ ] status is one of: PASS | FAIL | PARTIAL
+  [ ] confidence_score is an integer between 0 and 100
+  [ ] ship_readiness matches the status and confidence thresholds
+  [ ] sources_checked contains only trusted W3C/WAI URLs
+  [ ] evidence_summary cites specific normative language
+  [ ] verified_items contains each criterion that passed
+  [ ] remaining_risks contains each criterion that failed or is advisory
+  [ ] recommended_next_step is a single actionable engineer instruction
+  [ ] No text appears before <a11y_doublecheck_result>
+  [ ] No text appears after </a11y_doublecheck_result>
+
+========================================
+RELATIONSHIP TO OTHER RAG DOCUMENTS
+========================================
+This response template depends on:
+
+  a11y_doublecheck_registry.txt
+    — Agent identity, trusted sources, validation focus areas, ship thresholds
+
+  a11y_doublecheck_output_format.txt
+    — XML schema, field definitions, prohibited output patterns
+
+  a11y_doublecheck_examples.txt
+    — Concrete pass/fail examples grounding each validation scenario
+
+  orchestrator_rag_registry.txt
+    — Master OrchestratoR RAG index; A11Y DoubleCheck inherits its source-of-truth metadata
+
+  orchestrator_button_health_score_rag.txt
+    — First-pass accessibility scoring rules; A11Y DoubleCheck validates against these findings
+
+A11Y DoubleCheck does not modify OrchestratoR's health score.
+It validates the finding and returns a ship readiness verdict.
+The engineer decides whether to ship based on both signals.

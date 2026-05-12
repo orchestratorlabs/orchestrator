@@ -1,0 +1,243 @@
+========================================
+RAG DOCUMENT HEADER
+========================================
+id: a11y_doublecheck_examples_v1
+file_name: a11y_doublecheck_examples.txt
+type: rag_examples
+title: A11Y DoubleCheck Validation Examples
+author: Craig Maher
+product: OrchestratoR
+version: 1.0
+phase: Phase 3
+language: English
+intended_use: >
+  Ground the A11Y DoubleCheck Agent with concrete pass and fail validation examples.
+  Each example shows the input context, the criterion being validated, and the
+  expected structured verdict the agent should return.
+
+========================================
+EXAMPLE 1 — Disabled Text Contrast Fixed Successfully
+========================================
+scenario: Disabled text contrast fixed successfully
+theme_mode: Light
+wcag_criterion: WCAG 1.4.3 Contrast (Minimum)
+result: PASS
+
+context:
+  orchestrator_finding: >
+    Disabled button text uses color token --color-text-disabled.
+    Measured contrast ratio: 2.1:1 against background --color-surface-primary.
+    WCAG 1.4.3 requires 4.5:1 for normal text.
+    Finding: FAIL.
+  current_code: >
+    <button disabled className="btn btn--disabled">Submit</button>
+  current_tokens: >
+    --color-text-disabled: #767676;
+    --color-surface-primary: #FFFFFF;
+  engineer_fix_applied: >
+    Token updated:
+    --color-text-disabled: #595959;
+    Measured new contrast ratio: 7.0:1 against #FFFFFF.
+
+validation:
+  source_checked: https://www.w3.org/TR/WCAG21/#contrast-minimum
+  evidence: >
+    WCAG 1.4.3 requires a contrast ratio of at least 4.5:1 for normal text.
+    Exception: text or images of text that are part of an inactive user
+    interface component have no contrast requirement.
+    However, OrchestratoR applies a conservative validation that disabled
+    text should still meet 4.5:1 to avoid excluding low-vision users who
+    rely on readable disabled state cues.
+    Updated token #595959 on #FFFFFF yields 7.0:1. Passes.
+
+verdict:
+  status: PASS
+  confidence_score: 96
+  ship_readiness: Ship Ready
+
+========================================
+EXAMPLE 2 — Disabled Text Contrast Still Failing
+========================================
+scenario: Disabled text contrast still failing after attempted fix
+theme_mode: Light
+wcag_criterion: WCAG 1.4.3 Contrast (Minimum)
+result: FAIL
+
+context:
+  orchestrator_finding: >
+    Disabled button text uses color token --color-text-disabled.
+    Measured contrast ratio: 2.1:1 against background --color-surface-primary.
+    WCAG 1.4.3 requires 4.5:1. Finding: FAIL.
+  current_code: >
+    <button disabled className="btn btn--disabled">Submit</button>
+  current_tokens: >
+    --color-text-disabled: #999999;
+    --color-surface-primary: #FFFFFF;
+  engineer_fix_applied: >
+    Token updated from original value to #999999.
+    Measured new contrast ratio: 2.85:1 against #FFFFFF.
+
+validation:
+  source_checked: https://www.w3.org/TR/WCAG21/#contrast-minimum
+  evidence: >
+    WCAG 1.4.3 requires 4.5:1 for normal text.
+    #999999 on #FFFFFF yields approximately 2.85:1.
+    This does not meet the 4.5:1 threshold.
+    The fix did not resolve the failure.
+
+verdict:
+  status: FAIL
+  confidence_score: 97
+  ship_readiness: Do Not Ship
+  remaining_risk: >
+    Disabled text contrast still insufficient at 2.85:1.
+    Token must be darkened further. Recommended minimum: #767676 yields 4.54:1.
+    Preferred: #595959 yields 7.0:1.
+
+========================================
+EXAMPLE 3 — Focus Ring Contrast Verified
+========================================
+scenario: Focus ring contrast passes WCAG 1.4.11 in Light mode
+theme_mode: Light
+wcag_criterion: WCAG 1.4.11 Non-text Contrast
+result: PASS
+
+context:
+  orchestrator_finding: >
+    Button focus ring uses token --color-focus-ring.
+    Token value: #005FCC. Adjacent background: #FFFFFF.
+    Measured contrast ratio: 8.59:1. WCAG 1.4.11 requires 3:1.
+    Finding: PASS.
+  current_code: >
+    <button className="btn btn--primary">Save</button>
+  current_tokens: >
+    --color-focus-ring: #005FCC;
+    --color-surface-primary: #FFFFFF;
+
+validation:
+  source_checked: https://www.w3.org/TR/WCAG21/#non-text-contrast
+  evidence: >
+    WCAG 1.4.11 requires UI components and visual indicators to have
+    a contrast ratio of at least 3:1 against adjacent colors.
+    #005FCC on #FFFFFF yields 8.59:1. Exceeds requirement. Passes.
+
+verdict:
+  status: PASS
+  confidence_score: 99
+  ship_readiness: Ship Ready
+
+========================================
+EXAMPLE 4 — Semantic Button Passes Keyboard and Role Validation
+========================================
+scenario: Native button element passes keyboard and Name/Role/Value checks
+theme_mode: Light
+wcag_criterion: WCAG 2.1.1 Keyboard, WCAG 4.1.2 Name Role Value
+result: PASS
+
+context:
+  orchestrator_finding: >
+    Component uses a native <button> element.
+    Accessible name provided via visible text label "Delete".
+    No aria-label or aria-labelledby needed.
+    Finding: PASS on keyboard and Name/Role/Value.
+  current_code: >
+    <button type="button" onClick={handleDelete}>Delete</button>
+
+validation:
+  source_checked:
+    - https://www.w3.org/TR/WCAG21/#keyboard
+    - https://www.w3.org/TR/WCAG21/#name-role-value
+    - https://www.w3.org/WAI/ARIA/apg/patterns/button/
+  evidence: >
+    WCAG 2.1.1: Native <button> elements are natively keyboard operable.
+    They receive focus via Tab, activate via Enter and Space by default.
+    No additional keyboard handling is needed.
+    WCAG 4.1.2: Native <button> exposes role="button" to assistive technology.
+    The visible text "Delete" serves as the accessible name.
+    No ARIA additions required. Component passes both criteria.
+
+verdict:
+  status: PASS
+  confidence_score: 99
+  ship_readiness: Ship Ready
+
+========================================
+EXAMPLE 5 — div with onClick Fails Keyboard Validation
+========================================
+scenario: div element with onClick handler fails keyboard operability
+theme_mode: Light
+wcag_criterion: WCAG 2.1.1 Keyboard, WCAG 4.1.2 Name Role Value
+result: FAIL
+
+context:
+  orchestrator_finding: >
+    Component uses a <div> element with an onClick handler.
+    No role, tabIndex, or onKeyDown handler present.
+    Finding: FAIL on keyboard and Name/Role/Value.
+  current_code: >
+    <div onClick={handleAction} className="btn">Confirm</div>
+
+validation:
+  source_checked:
+    - https://www.w3.org/TR/WCAG21/#keyboard
+    - https://www.w3.org/TR/WCAG21/#name-role-value
+    - https://www.w3.org/WAI/ARIA/apg/patterns/button/
+  evidence: >
+    WCAG 2.1.1: A div with only an onClick handler is not keyboard operable
+    by default. It cannot receive keyboard focus unless tabIndex is added,
+    and it does not provide native Enter/Space activation behavior like a button.
+    Without a native button element or equivalent role, tabIndex, and keyboard
+    event handling, the interaction should not be considered ready to ship.
+    WCAG 4.1.2: A <div> has no implicit ARIA role. Without role="button",
+    tabIndex="0", and an onKeyDown handler, assistive technology cannot
+    identify or operate this element as an interactive control.
+    Fix: Replace with a native <button> element, or add
+    role="button", tabIndex={0}, and onKeyDown to handle Enter and Space.
+
+verdict:
+  status: FAIL
+  confidence_score: 98
+  ship_readiness: Do Not Ship
+  remaining_risk: >
+    Interactive div is not keyboard operable and not exposed correctly
+    to assistive technology. Must be remediated before ship.
+
+========================================
+EXAMPLE 6 — Dark Mode Token Validation Passes
+========================================
+scenario: Dark mode color tokens pass contrast checks for primary button
+theme_mode: Dark
+wcag_criterion: WCAG 1.4.3 Contrast (Minimum), WCAG 1.4.11 Non-text Contrast
+result: PASS
+
+context:
+  orchestrator_finding: >
+    Dark mode primary button.
+    Text token: --color-text-on-primary-dark: #FFFFFF.
+    Background token: --color-surface-primary-dark: #1A6EBD.
+    Measured text contrast ratio: 5.9:1.
+    Focus ring token: --color-focus-ring-dark: #7FC4FD.
+    Adjacent background: #121212.
+    Focus ring contrast ratio: 9.1:1.
+    Findings: PASS on both criteria.
+  current_code: >
+    <button className="btn btn--primary btn--dark">Save Changes</button>
+  current_tokens: >
+    --color-text-on-primary-dark: #FFFFFF;
+    --color-surface-primary-dark: #1A6EBD;
+    --color-focus-ring-dark: #7FC4FD;
+    --color-surface-page-dark: #121212;
+
+validation:
+  source_checked:
+    - https://www.w3.org/TR/WCAG21/#contrast-minimum
+    - https://www.w3.org/TR/WCAG21/#non-text-contrast
+  evidence: >
+    WCAG 1.4.3: #FFFFFF on #1A6EBD yields 5.9:1. Meets 4.5:1 requirement.
+    WCAG 1.4.11: #7FC4FD on #121212 yields 9.1:1. Meets 3:1 requirement.
+    Both Dark mode token pairs pass their respective contrast thresholds.
+
+verdict:
+  status: PASS
+  confidence_score: 97
+  ship_readiness: Ship Ready
