@@ -14,6 +14,40 @@ RAG_DIR = BASE_DIR / "rag"
 RAG_REGISTRY_FILE = RAG_DIR / "orchestrator_rag_registry.txt"
 BUTTON_RAG_FILE = RAG_DIR / "orchestrator_button_health_score_rag.txt"
 
+DOCS_DIR = BASE_DIR / "docs"
+A11Y_DOUBLECHECK_RAG_FILES = [
+    "a11y_doublecheck_registry.txt",
+    "a11y_doublecheck_examples.txt",
+    "a11y_doublecheck_output_format.txt",
+    "a11y_doublecheck_response_template.txt",
+]
+
+A11Y_DOUBLECHECK_MOCK_XML = """<a11y_doublecheck_result>
+  <status>PASS</status>
+  <confidence_score>97</confidence_score>
+  <ship_readiness>Ship Ready</ship_readiness>
+  <summary>A11Y DoubleCheck validated the current component state against the original OrchestratoR finding and trusted WCAG guidance.</summary>
+  <sources_checked>
+    <source>https://www.w3.org/TR/WCAG21/#contrast-minimum</source>
+    <source>https://www.w3.org/TR/WCAG21/#non-text-contrast</source>
+  </sources_checked>
+  <evidence_summary>WCAG contrast guidance was checked against the current design token values. No blocking accessibility risks were detected in this mock validation.</evidence_summary>
+  <verified_items>
+    <item>
+      <criterion>WCAG 1.4.3 Contrast Minimum</criterion>
+      <result>PASS</result>
+      <detail>WCAG 1.4.3 Contrast Minimum passed for the evaluated button state.</detail>
+    </item>
+    <item>
+      <criterion>WCAG 1.4.11 Non-text Contrast</criterion>
+      <result>PASS</result>
+      <detail>WCAG 1.4.11 Non-text Contrast passed for the evaluated focus or UI boundary state.</detail>
+    </item>
+  </verified_items>
+  <remaining_risks/>
+  <recommended_next_step>All checks pass — this component is ready to ship.</recommended_next_step>
+</a11y_doublecheck_result>"""
+
 COMPONENT_RAG_MAP = {
     "button": BUTTON_RAG_FILE,
 }
@@ -574,6 +608,36 @@ def rag_query():
         "answer": static_answer,
         "apiMode": api_mode,
         "outputFormat": static_output_format,
+    })
+
+
+@app.route("/a11y-doublecheck", methods=["POST"])
+def a11y_doublecheck():
+    data = request.get_json() or {}
+
+    # Load all four Phase 3 RAG files from docs/
+    loaded_rag_files = []
+    missing_rag_files = []
+    for file_name in A11Y_DOUBLECHECK_RAG_FILES:
+        file_path = DOCS_DIR / file_name
+        content = load_rag_file(file_path)
+        if content is not None:
+            loaded_rag_files.append(file_name)
+        else:
+            missing_rag_files.append(file_name)
+
+    if missing_rag_files:
+        return jsonify({
+            "status": "error",
+            "message": f"A11Y DoubleCheck RAG files could not be loaded: {', '.join(missing_rag_files)}",
+            "missingFiles": missing_rag_files,
+        }), 500
+
+    return jsonify({
+        "status": "success",
+        "apiMode": "mock",
+        "xmlResult": A11Y_DOUBLECHECK_MOCK_XML,
+        "loadedRagFiles": loaded_rag_files,
     })
 
 
