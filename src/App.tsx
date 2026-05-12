@@ -123,7 +123,6 @@ export function App() {
       <main className="main-layout">
         <nav className="utility-rail" aria-label="Utility navigation">
           <button type="button">Files</button>
-          <button type="button">Search</button>
           <button type="button">Git</button>
         </nav>
         <WorkspacePane

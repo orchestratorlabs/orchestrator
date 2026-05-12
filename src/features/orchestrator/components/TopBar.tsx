@@ -4,7 +4,7 @@ export function TopBar() {
       <input
         type="search"
         className="top-search"
-        placeholder="Search files, symbols, or commands"
+        placeholder="Search files, components or commands"
         aria-label="Search"
       />
       <div className="top-actions">
