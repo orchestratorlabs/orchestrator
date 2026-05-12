@@ -4,7 +4,52 @@ import { useOrchestratorState } from "./features/orchestrator/state/orchestrator
 import { SAMPLE_BUTTON_CSS, SAMPLE_BUTTON_CSS_DARK, SAMPLE_BUTTON_TSX, WorkspacePane } from "./features/workspace/WorkspacePane";
 import { useState } from "react";
 import { evaluateButtonAccessibility } from "./features/orchestrator/evaluator/buttonEvaluator";
-import type { EvaluationResult } from "./features/orchestrator/types/evaluation";
+import type { A11yDoubleCheckResult, EvaluationResult } from "./features/orchestrator/types/evaluation";
+
+function parseA11yDoubleCheckXml(xmlString: string): A11yDoubleCheckResult | null {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlString, "text/xml");
+    const root = doc.querySelector("a11y_doublecheck_result");
+    if (!root) return null;
+
+    const getText = (tag: string) => root.querySelector(tag)?.textContent?.trim() ?? "";
+
+    const sourcesChecked = Array.from(root.querySelectorAll("sources_checked > source"))
+      .map((el) => el.textContent?.trim() ?? "")
+      .filter(Boolean);
+
+    const verifiedItems = Array.from(root.querySelectorAll("verified_items > item")).map((item) => ({
+      criterion: item.querySelector("criterion")?.textContent?.trim() ?? "",
+      result: item.querySelector("result")?.textContent?.trim() ?? "",
+      detail: item.querySelector("detail")?.textContent?.trim() ?? "",
+    }));
+
+    const remainingRisks = Array.from(root.querySelectorAll("remaining_risks > risk"))
+      .map((el) => el.textContent?.trim() ?? "")
+      .filter(Boolean);
+
+    const rawStatus = getText("status");
+    const status =
+      rawStatus === "PASS" || rawStatus === "PARTIAL" || rawStatus === "FAIL"
+        ? rawStatus
+        : "FAIL";
+
+    return {
+      status,
+      confidenceScore: getText("confidence_score"),
+      shipReadiness: getText("ship_readiness"),
+      summary: getText("summary"),
+      sourcesChecked,
+      evidenceSummary: getText("evidence_summary"),
+      verifiedItems,
+      remainingRisks,
+      recommendedNextStep: getText("recommended_next_step"),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function App() {
   const { isPanelOpen, togglePanel } = useOrchestratorState();
@@ -21,7 +66,7 @@ export function App() {
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
   const [evaluatedMode, setEvaluatedMode] = useState<"light" | "dark" | null>(null);
   const [isDoubleChecking, setIsDoubleChecking] = useState(false);
-  const [a11yDoubleCheckXmlResult, setA11yDoubleCheckXmlResult] = useState<string | null>(null);
+  const [a11yDoubleCheckResult, setA11yDoubleCheckResult] = useState<A11yDoubleCheckResult | null>(null);
   const [a11yDoubleCheckError, setA11yDoubleCheckError] = useState<string | null>(null);
 
   const handlePreviewThemeChange = (theme: "light" | "dark") => {
@@ -143,7 +188,9 @@ export function App() {
 
       const data = await response.json();
       console.log("A11Y DoubleCheck response:", data);
-      setA11yDoubleCheckXmlResult(data.xmlResult ?? null);
+      const parsedResult = data.xmlResult ? parseA11yDoubleCheckXml(data.xmlResult) : null;
+      console.log("Parsed A11Y DoubleCheck result:", parsedResult);
+      setA11yDoubleCheckResult(parsedResult);
     } catch (error) {
       console.error("A11Y DoubleCheck error:", error);
       setA11yDoubleCheckError("A11Y DoubleCheck request failed.");
@@ -186,6 +233,7 @@ export function App() {
           selectedFindingRuleId={selectedFindingRuleId}
           onSelectFinding={setSelectedFindingRuleId}
           evaluatedMode={evaluatedMode}
+          a11yDoubleCheckResult={a11yDoubleCheckResult}
         />
       </main>
     </div>

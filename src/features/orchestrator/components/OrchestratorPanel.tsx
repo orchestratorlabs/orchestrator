@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { EvaluationResult } from "../types/evaluation";
+import type { A11yDoubleCheckResult, EvaluationResult } from "../types/evaluation";
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
 
 interface OrchestratorPanelProps {
@@ -9,7 +9,20 @@ interface OrchestratorPanelProps {
   selectedFindingRuleId: string | null;
   onSelectFinding: (ruleId: string) => void;
   evaluatedMode: "light" | "dark" | null;
+  a11yDoubleCheckResult: A11yDoubleCheckResult | null;
 }
+
+const STATUS_LABEL: Record<A11yDoubleCheckResult["status"], string> = {
+  PASS: "Passed",
+  PARTIAL: "Needs Review",
+  FAIL: "Failed",
+};
+
+const STATUS_CLASS: Record<A11yDoubleCheckResult["status"], string> = {
+  PASS: "doublecheck-status--pass",
+  PARTIAL: "doublecheck-status--partial",
+  FAIL: "doublecheck-status--fail",
+};
 
 export function OrchestratorPanel({
   isOpen,
@@ -18,6 +31,7 @@ export function OrchestratorPanel({
   selectedFindingRuleId,
   onSelectFinding,
   evaluatedMode,
+  a11yDoubleCheckResult,
 }: OrchestratorPanelProps) {
   const healthScore = evaluationResult?.healthScore ?? 0;
   const scoreRatio = Math.max(0, Math.min(healthScore, 100)) / 100;
@@ -81,6 +95,92 @@ export function OrchestratorPanel({
           <p>Detect. Fix. Ship.</p>
         </div>
       </div>
+
+      {a11yDoubleCheckResult && (
+        <section className={`panel-card doublecheck-card doublecheck-card--${a11yDoubleCheckResult.status.toLowerCase()}`}>
+          <h3>A11Y DoubleCheck</h3>
+
+          <p className="doublecheck-debug-confirm">A11Y DoubleCheck result loaded</p>
+
+          <div className="doublecheck-meta">
+            <span className={`doublecheck-status ${STATUS_CLASS[a11yDoubleCheckResult.status]}`}>
+              Status: {STATUS_LABEL[a11yDoubleCheckResult.status]}
+            </span>
+            {a11yDoubleCheckResult.confidenceScore && (
+              <span className="doublecheck-confidence">
+                Confidence: {a11yDoubleCheckResult.confidenceScore}%
+              </span>
+            )}
+            {a11yDoubleCheckResult.shipReadiness && (
+              <span className={`doublecheck-ship doublecheck-ship--${a11yDoubleCheckResult.status.toLowerCase()}`}>
+                Ship Readiness: {a11yDoubleCheckResult.shipReadiness}
+              </span>
+            )}
+          </div>
+
+          {a11yDoubleCheckResult.summary && (
+            <div className="doublecheck-section">
+              <p className="doublecheck-label">Summary</p>
+              <p className="doublecheck-body">{a11yDoubleCheckResult.summary}</p>
+            </div>
+          )}
+
+          {a11yDoubleCheckResult.sourcesChecked.length > 0 && (
+            <div className="doublecheck-section">
+              <p className="doublecheck-label">Sources Checked</p>
+              <ul className="doublecheck-list">
+                {a11yDoubleCheckResult.sourcesChecked.map((src) => (
+                  <li key={src} className="doublecheck-list-item doublecheck-list-item--source">{src}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {a11yDoubleCheckResult.evidenceSummary && (
+            <div className="doublecheck-section">
+              <p className="doublecheck-label">Evidence</p>
+              <p className="doublecheck-body">{a11yDoubleCheckResult.evidenceSummary}</p>
+            </div>
+          )}
+
+          {a11yDoubleCheckResult.verifiedItems.length > 0 && (
+            <div className="doublecheck-section">
+              <p className="doublecheck-label">Verified</p>
+              <ul className="doublecheck-list">
+                {a11yDoubleCheckResult.verifiedItems.map((item) => (
+                  <li key={item.criterion} className="doublecheck-verified-item">
+                    <span className={`doublecheck-verified-result doublecheck-verified-result--${item.result.toLowerCase()}`}>
+                      {item.result}
+                    </span>
+                    <span className="doublecheck-verified-criterion">{item.criterion}</span>
+                    {item.detail && <span className="doublecheck-verified-detail muted">{item.detail}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="doublecheck-section">
+            <p className="doublecheck-label">Remaining Risks</p>
+            {a11yDoubleCheckResult.remainingRisks.length > 0 ? (
+              <ul className="doublecheck-list">
+                {a11yDoubleCheckResult.remainingRisks.map((risk) => (
+                  <li key={risk} className="doublecheck-list-item">{risk}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="doublecheck-body doublecheck-body--no-risks">No blocking risks detected.</p>
+            )}
+          </div>
+
+          {a11yDoubleCheckResult.recommendedNextStep && (
+            <div className="doublecheck-section">
+              <p className="doublecheck-label">Recommended Next Step</p>
+              <p className="doublecheck-body">{a11yDoubleCheckResult.recommendedNextStep}</p>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="panel-card">
         <h3>Accessibility Health Score</h3>

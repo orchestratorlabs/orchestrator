@@ -1,5 +1,23 @@
 export type RuleStatus = "Pass" | "Unknown" | "Fail";
 
+export interface A11yVerifiedItem {
+  criterion: string;
+  result: string;
+  detail: string;
+}
+
+export interface A11yDoubleCheckResult {
+  status: "PASS" | "PARTIAL" | "FAIL";
+  confidenceScore: string;
+  shipReadiness: string;
+  summary: string;
+  sourcesChecked: string[];
+  evidenceSummary: string;
+  verifiedItems: A11yVerifiedItem[];
+  remainingRisks: string[];
+  recommendedNextStep: string;
+}
+
 export interface RuleResult {
   ruleId: string;
   ruleName: string;
