@@ -375,25 +375,30 @@ def build_a11y_doublecheck_verdict(payload, selected_sources, web_lookup_results
 
         if is_disabled_contrast:
             risk_msg = (
-                "Disabled text contrast is below OrchestratoR's design-system readability threshold. "
+                "Disabled text contrast is below OrchestratoR's design-system readability threshold.\n\n"
                 "WCAG exempts inactive controls from required contrast minimums, but this disabled-state "
                 "token may still reduce clarity for low-vision users and product teams reviewing component "
-                "states. OrchestratoR recommends updating --Text-Disabled to the approved design-system "
-                "value #494949."
+                "states.\n\n"
+                "OrchestratoR recommends updating --Text-Disabled to the approved design-system value #494949."
             )
             next_step = "Update --Text-Disabled to the approved design-system value #494949."
+            fail_summary = (
+                "A11Y DoubleCheck found a disabled text contrast issue that falls below "
+                "OrchestratoR's design-system readability threshold."
+            )
         else:
             risk_msg = fail_risk_detail or "; ".join(fail_signals)
             next_step = "Resolve the blocking accessibility issue before shipping."
+            fail_summary = (
+                "A11Y DoubleCheck found a blocking accessibility issue that should be resolved before shipping."
+            )
 
         tainted = _tainted_fragments_for_fail(fail_signals)
         return {
             "status": "FAIL",
             "confidence_score": 62,
             "ship_readiness": "Do Not Ship",
-            "summary": (
-                "A11Y DoubleCheck found a blocking accessibility issue that should be resolved before shipping."
-            ),
+            "summary": fail_summary,
             "remaining_risks": [risk_msg],
             "recommended_next_step": next_step,
             "verified_items": _criteria_from_sources(selected_sources, "PASS", excluded_fragments=tainted),
