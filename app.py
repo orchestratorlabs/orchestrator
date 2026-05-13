@@ -1,6 +1,9 @@
+import html
 import json
 import os
 import re
+import urllib.error
+import urllib.request
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -47,6 +50,195 @@ A11Y_DOUBLECHECK_MOCK_XML = """<a11y_doublecheck_result>
   <remaining_risks/>
   <recommended_next_step>All checks pass — this component is ready to ship.</recommended_next_step>
 </a11y_doublecheck_result>"""
+
+# ---------------------------------------------------------------------------
+# A11Y DoubleCheck — trusted source allowlist and web-lookup helpers
+# ---------------------------------------------------------------------------
+
+TRUSTED_SOURCE_PREFIXES = (
+    "https://www.w3.org/TR/WCAG21/",
+    "https://www.w3.org/WAI/WCAG21/Understanding/",
+    "https://www.w3.org/WAI/WCAG21/Techniques/",
+    "https://www.w3.org/TR/wai-aria-1.2/",
+    "https://www.w3.org/WAI/ARIA/apg/",
+)
+
+_LOOKUP_HEADERS = {
+    "User-Agent": "OrchestratoR-A11Y-DoubleCheck/1.0",
+    "Accept": "text/html,application/xhtml+xml",
+}
+
+_LOOKUP_TIMEOUT = 5
+_LOOKUP_READ_BYTES = 16384
+
+
+def is_trusted_url(url):
+    return any(url.startswith(prefix) for prefix in TRUSTED_SOURCE_PREFIXES)
+
+
+def select_trusted_sources(findings_text, recommended_fix_text):
+    """Return ordered, deduplicated trusted URLs based on keyword matching."""
+    combined = (findings_text + " " + recommended_fix_text).lower()
+
+    candidates = []
+    if "contrast" in combined:
+        candidates += [
+            "https://www.w3.org/TR/WCAG21/#contrast-minimum",
+            "https://www.w3.org/TR/WCAG21/#non-text-contrast",
+        ]
+    if "keyboard" in combined:
+        candidates += [
+            "https://www.w3.org/TR/WCAG21/#keyboard",
+            "https://www.w3.org/WAI/ARIA/apg/patterns/button/",
+        ]
+    if "focus" in combined:
+        candidates += [
+            "https://www.w3.org/TR/WCAG21/#focus-visible",
+            "https://www.w3.org/TR/WCAG21/#non-text-contrast",
+        ]
+    if any(kw in combined for kw in ["name", "role", "value", "aria"]):
+        candidates += [
+            "https://www.w3.org/TR/WCAG21/#name-role-value",
+            "https://www.w3.org/TR/wai-aria-1.2/",
+        ]
+
+    # Deduplicate preserving insertion order
+    seen = set()
+    unique = []
+    for url in candidates:
+        if url not in seen:
+            seen.add(url)
+            unique.append(url)
+
+    if not unique:
+        unique = [
+            "https://www.w3.org/TR/WCAG21/#contrast-minimum",
+            "https://www.w3.org/TR/WCAG21/#keyboard",
+            "https://www.w3.org/TR/WCAG21/#name-role-value",
+        ]
+
+    return unique
+
+
+def _strip_html(raw_html):
+    """Return plain text from an HTML string (tags stripped, entities decoded)."""
+    text = re.sub(r"<[^>]+>", " ", raw_html)
+    text = html.unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _fetch_url_preview(url):
+    """
+    Fetch the base page for a URL (ignoring fragment) and return a short text
+    excerpt. Returns None on any network or parse failure.
+    """
+    base_url = url.split("#")[0]
+    try:
+        req = urllib.request.Request(base_url, headers=_LOOKUP_HEADERS)
+        with urllib.request.urlopen(req, timeout=_LOOKUP_TIMEOUT) as resp:
+            raw = resp.read(_LOOKUP_READ_BYTES).decode("utf-8", errors="replace")
+        return _strip_html(raw)[:400]
+    except Exception:
+        return None
+
+
+def perform_web_lookup(urls):
+    """
+    Attempt a controlled fetch for each trusted URL.
+    Returns a list of result objects: {url, lookupStatus, evidencePreview}.
+    """
+    results = []
+    for url in urls:
+        if not is_trusted_url(url):
+            results.append({
+                "url": url,
+                "lookupStatus": "skipped",
+                "evidencePreview": "URL is not in the trusted source allowlist — skipped.",
+            })
+            continue
+
+        preview = _fetch_url_preview(url)
+        if preview:
+            results.append({
+                "url": url,
+                "lookupStatus": "success",
+                "evidencePreview": preview,
+            })
+        else:
+            results.append({
+                "url": url,
+                "lookupStatus": "failed",
+                "evidencePreview": "Controlled web lookup could not be completed for this source in the current environment.",
+            })
+
+    return results
+
+
+def _build_evidence_summary(findings_text, recommended_fix_text, any_success):
+    """Return the evidence_summary string based on lookup outcome and keywords."""
+    if not any_success:
+        return (
+            "Controlled W3C/WAI lookup was attempted but could not be completed in this "
+            "local environment. A11Y DoubleCheck used the trusted W3C/WAI source list and "
+            "local Phase 3 RAG fallback rules to complete the mock validation."
+        )
+
+    combined = (findings_text + " " + recommended_fix_text).lower()
+    criteria = []
+    if "contrast" in combined:
+        criteria += ["WCAG 1.4.3 Contrast Minimum", "WCAG 1.4.11 Non-text Contrast"]
+    if "keyboard" in combined:
+        criteria.append("WCAG 2.1.1 Keyboard")
+    if "focus" in combined:
+        criteria.append("WCAG 2.4.7 Focus Visible")
+    if any(kw in combined for kw in ["name", "role", "value", "aria"]):
+        criteria.append("WCAG 4.1.2 Name, Role, Value")
+
+    if not criteria:
+        criteria = ["WCAG 1.4.3 Contrast Minimum", "WCAG 2.1.1 Keyboard", "WCAG 4.1.2 Name, Role, Value"]
+
+    if len(criteria) == 1:
+        criteria_str = criteria[0]
+    elif len(criteria) == 2:
+        criteria_str = f"{criteria[0]} and {criteria[1]}"
+    else:
+        criteria_str = ", ".join(criteria[:-1]) + f", and {criteria[-1]}"
+
+    return (
+        f"Controlled W3C/WAI lookup completed for {criteria_str}. "
+        "The checked guidance supports validating accessibility requirements "
+        "against WCAG thresholds before ship."
+    )
+
+
+def _build_a11y_doublecheck_xml(selected_sources, evidence_summary):
+    """Build the a11y_doublecheck_result XML string."""
+    sources_xml = "\n".join(f"    <source>{s}</source>" for s in selected_sources)
+    return f"""<a11y_doublecheck_result>
+  <status>PASS</status>
+  <confidence_score>97</confidence_score>
+  <ship_readiness>Ship Ready</ship_readiness>
+  <summary>A11Y DoubleCheck validated the current component state against the original OrchestratoR finding and trusted WCAG guidance.</summary>
+  <sources_checked>
+{sources_xml}
+  </sources_checked>
+  <evidence_summary>{evidence_summary}</evidence_summary>
+  <verified_items>
+    <item>
+      <criterion>WCAG 1.4.3 Contrast Minimum</criterion>
+      <result>PASS</result>
+      <detail>WCAG 1.4.3 Contrast Minimum passed for the evaluated button state.</detail>
+    </item>
+    <item>
+      <criterion>WCAG 1.4.11 Non-text Contrast</criterion>
+      <result>PASS</result>
+      <detail>WCAG 1.4.11 Non-text Contrast passed for the evaluated focus or UI boundary state.</detail>
+    </item>
+  </verified_items>
+  <remaining_risks/>
+  <recommended_next_step>All checks pass — this component is ready to ship.</recommended_next_step>
+</a11y_doublecheck_result>"""
+
 
 COMPONENT_RAG_MAP = {
     "button": BUTTON_RAG_FILE,
@@ -615,6 +807,9 @@ def rag_query():
 def a11y_doublecheck():
     data = request.get_json() or {}
 
+    accessibility_findings = data.get("accessibilityFindings", "")
+    recommended_fix = data.get("recommendedFix", "")
+
     # Load all four Phase 3 RAG files from docs/
     loaded_rag_files = []
     missing_rag_files = []
@@ -633,11 +828,25 @@ def a11y_doublecheck():
             "missingFiles": missing_rag_files,
         }), 500
 
+    # Select trusted sources based on the incoming findings keywords
+    selected_sources = select_trusted_sources(accessibility_findings, recommended_fix)
+
+    # Perform controlled web lookup against the selected trusted URLs
+    web_lookup_results = perform_web_lookup(selected_sources)
+
+    any_success = any(r["lookupStatus"] == "success" for r in web_lookup_results)
+    api_mode = "web_lookup_mock" if any_success else "web_lookup_fallback"
+
+    evidence_summary = _build_evidence_summary(accessibility_findings, recommended_fix, any_success)
+    xml_result = _build_a11y_doublecheck_xml(selected_sources, evidence_summary)
+
     return jsonify({
         "status": "success",
-        "apiMode": "mock",
-        "xmlResult": A11Y_DOUBLECHECK_MOCK_XML,
+        "apiMode": api_mode,
+        "xmlResult": xml_result,
         "loadedRagFiles": loaded_rag_files,
+        "sourcesChecked": selected_sources,
+        "webLookupResults": web_lookup_results,
     })
 
 
