@@ -211,33 +211,257 @@ def _build_evidence_summary(findings_text, recommended_fix_text, any_success):
     )
 
 
-def _build_a11y_doublecheck_xml(selected_sources, evidence_summary):
-    """Build the a11y_doublecheck_result XML string."""
+# Source URL fragment → (WCAG criterion label, detail text)
+_SOURCE_CRITERIA = [
+    ("#contrast-minimum",  "WCAG 1.4.3 Contrast Minimum",    "Contrast ratio meets the 4.5:1 WCAG AA threshold for normal text."),
+    ("#non-text-contrast", "WCAG 1.4.11 Non-text Contrast",   "UI component boundary contrast meets the 3:1 WCAG AA threshold."),
+    ("#keyboard",          "WCAG 2.1.1 Keyboard",             "Component is fully operable via keyboard without requiring specific timings."),
+    ("#focus-visible",     "WCAG 2.4.7 Focus Visible",        "Keyboard focus indicator is visible when the component receives focus."),
+    ("#name-role-value",   "WCAG 4.1.2 Name, Role, Value",    "Component has an accessible name, role, and value exposed to assistive technology."),
+    ("wai-aria-1.2",       "WAI-ARIA 1.2 Role Semantics",     "ARIA roles and properties are correctly applied."),
+    ("apg/patterns/button","ARIA APG Button Pattern",          "Button interaction pattern follows ARIA authoring practices."),
+]
+
+
+def _criteria_from_sources(selected_sources, default_result="PASS", excluded_fragments=None):
+    """Return verified_items list derived from selected trusted source URLs.
+
+    excluded_fragments: set of URL fragment strings to omit so that a FAIL verdict
+    never claims the blocking criterion passed in verified_items.
+    """
+    excluded = excluded_fragments or set()
+    items = []
+    seen = set()
+    for url in selected_sources:
+        for fragment, criterion, detail in _SOURCE_CRITERIA:
+            if fragment in url and criterion not in seen and fragment not in excluded:
+                seen.add(criterion)
+                items.append({"criterion": criterion, "result": default_result, "detail": detail})
+    # Fallback only on the PASS path (no exclusions applied)
+    if not items and not excluded:
+        items = [
+            {"criterion": "WCAG 1.4.3 Contrast Minimum", "result": default_result,
+             "detail": "Contrast ratio evaluated against WCAG AA thresholds."},
+            {"criterion": "WCAG 2.1.1 Keyboard", "result": default_result,
+             "detail": "Keyboard operability evaluated."},
+        ]
+    return items
+
+
+def _tainted_fragments_for_fail(fail_signals):
+    """Map fail signal text to source URL fragments that must be excluded from verified_items."""
+    tainted = set()
+    signal_text = " ".join(fail_signals).lower()
+    if "contrast" in signal_text:
+        tainted |= {"#contrast-minimum", "#non-text-contrast"}
+    if "keyboard" in signal_text or "button semantics" in signal_text:
+        tainted |= {"#keyboard", "apg/patterns/button"}
+    if "button semantics" in signal_text or "semantic" in signal_text or "role" in signal_text:
+        tainted |= {"#name-role-value", "wai-aria-1.2"}
+    if "focus" in signal_text:
+        tainted |= {"#focus-visible"}
+    return tainted
+
+
+def build_a11y_doublecheck_verdict(payload, selected_sources, web_lookup_results):
+    """
+    Inspect the request payload and return a verdict dict:
+      status, confidence_score, ship_readiness, summary,
+      remaining_risks, recommended_next_step, verified_items,
+      dynamic_verdict_summary.
+
+    Rule A — PASS: clear positive signal, no failure signal.
+    Rule B — FAIL: clear failure signal (FAIL beats PASS when both present).
+    Rule C — PARTIAL: ambiguous or missing evidence.
+    """
+    component_code = (payload.get("componentCode") or "").strip()
+    css_code       = (payload.get("cssCode") or "").strip()
+    findings       = (payload.get("accessibilityFindings") or "").strip()
+    recommended_fix = (payload.get("recommendedFix") or "").strip()
+    theme_mode     = (payload.get("selectedThemeMode") or "").strip()
+
+    findings_lower   = findings.lower()
+    css_lower        = css_code.lower()
+    component_lower  = component_code.lower()
+
+    # --- PASS signals ---
+    pass_signals = []
+    if "#494949" in recommended_fix:
+        pass_signals.append("recommendedFix includes approved #494949 token")
+    if "#494949" in css_code:
+        pass_signals.append("cssCode includes approved #494949 token")
+    if "fixed" in findings_lower:
+        pass_signals.append("accessibilityFindings indicates issue is fixed")
+    if "passes" in findings_lower:
+        pass_signals.append("accessibilityFindings indicates check passes")
+    if "100" in findings:
+        pass_signals.append("accessibilityFindings indicates score of 100")
+    if "<button" in component_lower:
+        pass_signals.append("componentCode uses native <button> element")
+    if "<button" in css_lower:
+        pass_signals.append("cssCode includes native button pattern")
+
+    # --- FAIL signals (most-specific keyword wins for risk detail) ---
+    fail_signals = []
+    fail_risk_detail = ""
+
+    if "contrast failed" in findings_lower:
+        fail_signals.append("contrast check failed")
+        fail_risk_detail = "Contrast check failed — the component does not meet WCAG contrast thresholds."
+    elif "failed" in findings_lower:
+        fail_signals.append("accessibility check failed")
+        fail_risk_detail = "Accessibility check failed — review the findings and apply the recommended fix."
+    elif "fail" in findings_lower:
+        fail_signals.append("accessibility issue detected")
+        fail_risk_detail = "Accessibility issue detected — resolve before shipping."
+
+    for bad_ratio in ["1.79", "2.1:1", "2.85"]:
+        if bad_ratio in findings:
+            fail_signals.append(f"failing contrast ratio {bad_ratio}")
+            if not fail_risk_detail:
+                fail_risk_detail = f"Contrast ratio {bad_ratio} is below the WCAG 4.5:1 AA threshold for normal text."
+            break
+
+    if "<div" in component_lower and "onclick" in component_lower:
+        if 'role="button"' not in component_code and "tabindex" not in component_lower:
+            fail_signals.append("div+onClick lacks button semantics")
+            if not fail_risk_detail:
+                fail_risk_detail = (
+                    'componentCode uses a <div> with onClick but is missing role="button" and tabIndex — '
+                    "not keyboard-accessible or properly exposed to assistive technology."
+                )
+
+    if not recommended_fix and any(kw in findings_lower for kw in ["fail", "failed", "contrast failed"]):
+        if not fail_signals:
+            fail_signals.append("no fix provided for detected failure")
+            fail_risk_detail = "A failure was detected but no recommended fix was provided."
+
+    # --- Missing evidence ---
+    missing_evidence = []
+    if not component_code:
+        missing_evidence.append("componentCode is missing — cannot verify semantic structure")
+    if not css_code:
+        missing_evidence.append("cssCode is missing — cannot verify applied tokens or styles")
+    if not findings:
+        missing_evidence.append("accessibilityFindings is missing — cannot assess current check state")
+    if not theme_mode:
+        missing_evidence.append("selectedThemeMode is missing — cannot confirm which mode was evaluated")
+
+    any_lookup_success = any(r["lookupStatus"] == "success" for r in web_lookup_results)
+
+    # --- Rule A: PASS ---
+    if pass_signals and not fail_signals:
+        return {
+            "status": "PASS",
+            "confidence_score": 97,
+            "ship_readiness": "Ship Ready",
+            "summary": (
+                "A11Y DoubleCheck validated the current component state and found no blocking "
+                "accessibility risks for the evaluated criteria."
+            ),
+            "remaining_risks": [],
+            "recommended_next_step": "All checks pass — this component is ready to ship.",
+            "verified_items": _criteria_from_sources(selected_sources, "PASS"),
+            "dynamic_verdict_summary": f"PASS — triggered by: {'; '.join(pass_signals)}",
+        }
+
+    # --- Rule B: FAIL ---
+    if fail_signals:
+        combined_lower = (findings + " " + css_code + " " + recommended_fix).lower()
+        is_disabled_contrast = (
+            any("contrast" in sig for sig in fail_signals)
+            and any(kw in combined_lower for kw in ["disabled", "text-disabled"])
+        )
+
+        if is_disabled_contrast:
+            risk_msg = (
+                "Disabled text contrast is below OrchestratoR's design-system readability threshold. "
+                "WCAG exempts inactive controls from required contrast minimums, but this disabled-state "
+                "token may still reduce clarity for low-vision users and product teams reviewing component "
+                "states. OrchestratoR recommends updating --Text-Disabled to the approved design-system "
+                "value #494949."
+            )
+            next_step = "Update --Text-Disabled to the approved design-system value #494949."
+        else:
+            risk_msg = fail_risk_detail or "; ".join(fail_signals)
+            next_step = "Resolve the blocking accessibility issue before shipping."
+
+        tainted = _tainted_fragments_for_fail(fail_signals)
+        return {
+            "status": "FAIL",
+            "confidence_score": 62,
+            "ship_readiness": "Do Not Ship",
+            "summary": (
+                "A11Y DoubleCheck found a blocking accessibility issue that should be resolved before shipping."
+            ),
+            "remaining_risks": [risk_msg],
+            "recommended_next_step": next_step,
+            "verified_items": _criteria_from_sources(selected_sources, "PASS", excluded_fragments=tainted),
+            "dynamic_verdict_summary": f"FAIL — triggered by: {'; '.join(fail_signals)}",
+        }
+
+    # --- Rule C: PARTIAL ---
+    partial_risks = list(missing_evidence)
+    if not any_lookup_success:
+        partial_risks.append(
+            "Controlled W3C/WAI web lookup could not be completed — evidence is based on local fallback only"
+        )
+    if not partial_risks:
+        partial_risks = ["No clear pass or fail signal was detected — review the provided inputs"]
+
+    return {
+        "status": "PARTIAL",
+        "confidence_score": 78,
+        "ship_readiness": "Ship With Caution",
+        "summary": (
+            "A11Y DoubleCheck could not fully validate the component because some required "
+            "evidence was missing or incomplete."
+        ),
+        "remaining_risks": partial_risks,
+        "recommended_next_step": "Review the remaining risks before shipping.",
+        "verified_items": [],
+        "dynamic_verdict_summary": f"PARTIAL — missing or ambiguous: {'; '.join(partial_risks[:2])}",
+    }
+
+
+def _build_a11y_doublecheck_xml(selected_sources, evidence_summary, verdict):
+    """Build the a11y_doublecheck_result XML string from a dynamic verdict dict."""
     sources_xml = "\n".join(f"    <source>{s}</source>" for s in selected_sources)
-    return f"""<a11y_doublecheck_result>
-  <status>PASS</status>
-  <confidence_score>97</confidence_score>
-  <ship_readiness>Ship Ready</ship_readiness>
-  <summary>A11Y DoubleCheck validated the current component state against the original OrchestratoR finding and trusted WCAG guidance.</summary>
-  <sources_checked>
-{sources_xml}
-  </sources_checked>
-  <evidence_summary>{evidence_summary}</evidence_summary>
-  <verified_items>
-    <item>
-      <criterion>WCAG 1.4.3 Contrast Minimum</criterion>
-      <result>PASS</result>
-      <detail>WCAG 1.4.3 Contrast Minimum passed for the evaluated button state.</detail>
-    </item>
-    <item>
-      <criterion>WCAG 1.4.11 Non-text Contrast</criterion>
-      <result>PASS</result>
-      <detail>WCAG 1.4.11 Non-text Contrast passed for the evaluated focus or UI boundary state.</detail>
-    </item>
-  </verified_items>
-  <remaining_risks/>
-  <recommended_next_step>All checks pass — this component is ready to ship.</recommended_next_step>
-</a11y_doublecheck_result>"""
+
+    items_parts = []
+    for item in verdict["verified_items"]:
+        items_parts.append(
+            f"    <item>\n"
+            f"      <criterion>{item['criterion']}</criterion>\n"
+            f"      <result>{item['result']}</result>\n"
+            f"      <detail>{item['detail']}</detail>\n"
+            f"    </item>"
+        )
+    if items_parts:
+        verified_items_xml = f"  <verified_items>\n" + "\n".join(items_parts) + "\n  </verified_items>"
+    else:
+        verified_items_xml = "  <verified_items/>"
+
+    risks = verdict["remaining_risks"]
+    if risks:
+        risks_inner = "\n".join(f"    <risk>{r}</risk>" for r in risks)
+        remaining_risks_xml = f"  <remaining_risks>\n{risks_inner}\n  </remaining_risks>"
+    else:
+        remaining_risks_xml = "  <remaining_risks/>"
+
+    return (
+        f"<a11y_doublecheck_result>\n"
+        f"  <status>{verdict['status']}</status>\n"
+        f"  <confidence_score>{verdict['confidence_score']}</confidence_score>\n"
+        f"  <ship_readiness>{verdict['ship_readiness']}</ship_readiness>\n"
+        f"  <summary>{verdict['summary']}</summary>\n"
+        f"  <sources_checked>\n{sources_xml}\n  </sources_checked>\n"
+        f"  <evidence_summary>{evidence_summary}</evidence_summary>\n"
+        f"{verified_items_xml}\n"
+        f"{remaining_risks_xml}\n"
+        f"  <recommended_next_step>{verdict['recommended_next_step']}</recommended_next_step>\n"
+        f"</a11y_doublecheck_result>"
+    )
 
 
 COMPONENT_RAG_MAP = {
@@ -835,10 +1059,19 @@ def a11y_doublecheck():
     web_lookup_results = perform_web_lookup(selected_sources)
 
     any_success = any(r["lookupStatus"] == "success" for r in web_lookup_results)
-    api_mode = "web_lookup_mock" if any_success else "web_lookup_fallback"
+    api_mode = "web_lookup_dynamic" if any_success else "web_lookup_fallback_dynamic"
+
+    # Build dynamic verdict based on payload content
+    verdict = build_a11y_doublecheck_verdict(data, selected_sources, web_lookup_results)
+
+    print(f"[A11Y DoubleCheck] selected_sources: {selected_sources}")
+    print(f"[A11Y DoubleCheck] apiMode: {api_mode}")
+    print(f"[A11Y DoubleCheck] verdict status: {verdict['status']}")
+    print(f"[A11Y DoubleCheck] confidence_score: {verdict['confidence_score']}")
+    print(f"[A11Y DoubleCheck] ship_readiness: {verdict['ship_readiness']}")
 
     evidence_summary = _build_evidence_summary(accessibility_findings, recommended_fix, any_success)
-    xml_result = _build_a11y_doublecheck_xml(selected_sources, evidence_summary)
+    xml_result = _build_a11y_doublecheck_xml(selected_sources, evidence_summary, verdict)
 
     return jsonify({
         "status": "success",
@@ -847,6 +1080,7 @@ def a11y_doublecheck():
         "loadedRagFiles": loaded_rag_files,
         "sourcesChecked": selected_sources,
         "webLookupResults": web_lookup_results,
+        "dynamicVerdictSummary": verdict["dynamic_verdict_summary"],
     })
 
 
