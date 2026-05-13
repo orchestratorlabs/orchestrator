@@ -76,48 +76,68 @@ def is_trusted_url(url):
     return any(url.startswith(prefix) for prefix in TRUSTED_SOURCE_PREFIXES)
 
 
-def select_trusted_sources(findings_text, recommended_fix_text):
-    """Return ordered, deduplicated trusted URLs based on keyword matching."""
+def detect_issue_type(findings_text, recommended_fix_text):
+    """Detect the primary accessibility issue type from findings and fix text.
+
+    Contrast takes highest priority so a contrast finding that incidentally
+    mentions ARIA or focus keywords is not classified as those types.
+    Returns one of: 'contrast', 'keyboard', 'focus', 'name-role-value', 'ambiguous'.
+    """
     combined = (findings_text + " " + recommended_fix_text).lower()
 
-    candidates = []
-    if "contrast" in combined:
-        candidates += [
+    contrast_kws = ["contrast", "color", "text contrast", "disabled text", "#494949", "ratio", "1.79", "4.5", "3:1"]
+    if any(kw in combined for kw in contrast_kws):
+        return "contrast"
+
+    keyboard_kws = ["keyboard", "tab", "enter", "space", "onkeydown", "div onclick"]
+    if any(kw in combined for kw in keyboard_kws):
+        return "keyboard"
+
+    focus_kws = ["focus visible", "focus ring", "focus", "outline"]
+    if any(kw in combined for kw in focus_kws):
+        return "focus"
+
+    nrv_kws = ["accessible name", "name", "role", "value", "aria"]
+    if any(kw in combined for kw in nrv_kws):
+        return "name-role-value"
+
+    return "ambiguous"
+
+
+def select_trusted_sources(findings_text, recommended_fix_text):
+    """Return trusted source URLs scoped exclusively to the detected issue type.
+
+    Uses detect_issue_type so a contrast-only finding never pulls in keyboard,
+    focus, or ARIA sources — avoiding overclaiming in verified_items.
+    """
+    issue_type = detect_issue_type(findings_text, recommended_fix_text)
+
+    if issue_type == "contrast":
+        return [
             "https://www.w3.org/TR/WCAG21/#contrast-minimum",
             "https://www.w3.org/TR/WCAG21/#non-text-contrast",
         ]
-    if "keyboard" in combined:
-        candidates += [
+    if issue_type == "keyboard":
+        return [
             "https://www.w3.org/TR/WCAG21/#keyboard",
             "https://www.w3.org/WAI/ARIA/apg/patterns/button/",
         ]
-    if "focus" in combined:
-        candidates += [
+    if issue_type == "focus":
+        return [
             "https://www.w3.org/TR/WCAG21/#focus-visible",
             "https://www.w3.org/TR/WCAG21/#non-text-contrast",
         ]
-    if any(kw in combined for kw in ["name", "role", "value", "aria"]):
-        candidates += [
+    if issue_type == "name-role-value":
+        return [
             "https://www.w3.org/TR/WCAG21/#name-role-value",
             "https://www.w3.org/TR/wai-aria-1.2/",
         ]
-
-    # Deduplicate preserving insertion order
-    seen = set()
-    unique = []
-    for url in candidates:
-        if url not in seen:
-            seen.add(url)
-            unique.append(url)
-
-    if not unique:
-        unique = [
-            "https://www.w3.org/TR/WCAG21/#contrast-minimum",
-            "https://www.w3.org/TR/WCAG21/#keyboard",
-            "https://www.w3.org/TR/WCAG21/#name-role-value",
-        ]
-
-    return unique
+    # ambiguous — conservative default, do not overclaim
+    return [
+        "https://www.w3.org/TR/WCAG21/#contrast-minimum",
+        "https://www.w3.org/TR/WCAG21/#keyboard",
+        "https://www.w3.org/TR/WCAG21/#name-role-value",
+    ]
 
 
 def _strip_html(raw_html):
@@ -175,7 +195,7 @@ def perform_web_lookup(urls):
 
 
 def _build_evidence_summary(findings_text, recommended_fix_text, any_success):
-    """Return the evidence_summary string based on lookup outcome and keywords."""
+    """Return the evidence_summary string scoped to the detected issue type."""
     if not any_success:
         return (
             "A11Y DoubleCheck validated this result using trusted W3C/WAI references and "
@@ -184,26 +204,15 @@ def _build_evidence_summary(findings_text, recommended_fix_text, any_success):
             "through the approved fallback path."
         )
 
-    combined = (findings_text + " " + recommended_fix_text).lower()
-    criteria = []
-    if "contrast" in combined:
-        criteria += ["WCAG 1.4.3 Contrast Minimum", "WCAG 1.4.11 Non-text Contrast"]
-    if "keyboard" in combined:
-        criteria.append("WCAG 2.1.1 Keyboard")
-    if "focus" in combined:
-        criteria.append("WCAG 2.4.7 Focus Visible")
-    if any(kw in combined for kw in ["name", "role", "value", "aria"]):
-        criteria.append("WCAG 4.1.2 Name, Role, Value")
-
-    if not criteria:
-        criteria = ["WCAG 1.4.3 Contrast Minimum", "WCAG 2.1.1 Keyboard", "WCAG 4.1.2 Name, Role, Value"]
-
-    if len(criteria) == 1:
-        criteria_str = criteria[0]
-    elif len(criteria) == 2:
-        criteria_str = f"{criteria[0]} and {criteria[1]}"
-    else:
-        criteria_str = ", ".join(criteria[:-1]) + f", and {criteria[-1]}"
+    issue_type = detect_issue_type(findings_text, recommended_fix_text)
+    criteria_map = {
+        "contrast":       "WCAG 1.4.3 Contrast Minimum and WCAG 1.4.11 Non-text Contrast",
+        "keyboard":       "WCAG 2.1.1 Keyboard and ARIA APG Button Pattern",
+        "focus":          "WCAG 2.4.7 Focus Visible and WCAG 1.4.11 Non-text Contrast",
+        "name-role-value":"WCAG 4.1.2 Name, Role, Value and WAI-ARIA 1.2",
+        "ambiguous":      "WCAG 1.4.3 Contrast Minimum, WCAG 2.1.1 Keyboard, and WCAG 4.1.2 Name, Role, Value",
+    }
+    criteria_str = criteria_map[issue_type]
 
     return (
         f"Controlled W3C/WAI lookup completed for {criteria_str}. "
@@ -214,8 +223,8 @@ def _build_evidence_summary(findings_text, recommended_fix_text, any_success):
 
 # Source URL fragment → (WCAG criterion label, detail text)
 _SOURCE_CRITERIA = [
-    ("#contrast-minimum",  "WCAG 1.4.3 Contrast Minimum",    "Contrast ratio meets the 4.5:1 WCAG AA threshold for normal text."),
-    ("#non-text-contrast", "WCAG 1.4.11 Non-text Contrast",   "UI component boundary contrast meets the 3:1 WCAG AA threshold."),
+    ("#contrast-minimum",  "WCAG 1.4.3 Contrast Minimum",    "Updated text token meets the expected contrast threshold for the evaluated state."),
+    ("#non-text-contrast", "WCAG 1.4.11 Non-text Contrast",   "Relevant UI boundary or focus contrast guidance was checked against trusted W3C/WAI sources."),
     ("#keyboard",          "WCAG 2.1.1 Keyboard",             "Component is fully operable via keyboard without requiring specific timings."),
     ("#focus-visible",     "WCAG 2.4.7 Focus Visible",        "Keyboard focus indicator is visible when the component receives focus."),
     ("#name-role-value",   "WCAG 4.1.2 Name, Role, Value",    "Component has an accessible name, role, and value exposed to assistive technology."),
