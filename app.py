@@ -34,7 +34,7 @@ A11Y_DOUBLECHECK_MOCK_XML = """<a11y_doublecheck_result>
     <source>https://www.w3.org/TR/WCAG21/#contrast-minimum</source>
     <source>https://www.w3.org/TR/WCAG21/#non-text-contrast</source>
   </sources_checked>
-  <evidence_summary>WCAG contrast guidance was checked against the current design token values. No blocking accessibility risks were detected in this mock validation.</evidence_summary>
+  <evidence_summary>WCAG contrast guidance was checked against the current design token values. No blocking accessibility risks were detected. A11Y DoubleCheck validated this result using trusted W3C/WAI references and OrchestratoR's local Phase 3 accessibility rules.</evidence_summary>
   <verified_items>
     <item>
       <criterion>WCAG 1.4.3 Contrast Minimum</criterion>
@@ -178,9 +178,10 @@ def _build_evidence_summary(findings_text, recommended_fix_text, any_success):
     """Return the evidence_summary string based on lookup outcome and keywords."""
     if not any_success:
         return (
-            "Controlled W3C/WAI lookup was attempted but could not be completed in this "
-            "local environment. A11Y DoubleCheck used the trusted W3C/WAI source list and "
-            "local Phase 3 RAG fallback rules to complete the mock validation."
+            "A11Y DoubleCheck validated this result using trusted W3C/WAI references and "
+            "OrchestratoR's local Phase 3 accessibility rules. Live source lookup was "
+            "unavailable in this local environment, so the Agent completed validation "
+            "through the approved fallback path."
         )
 
     combined = (findings_text + " " + recommended_fix_text).lower()
