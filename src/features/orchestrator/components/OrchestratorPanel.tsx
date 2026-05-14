@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { A11yDoubleCheckResult, EvaluationResult } from "../types/evaluation";
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
 
@@ -41,6 +41,17 @@ export function OrchestratorPanel({
   const unknownCount =
     evaluationResult?.findings.filter((finding) => finding.status === "Unknown").length ?? 0;
   const failCount = evaluationResult?.findings.filter((finding) => finding.status === "Fail").length ?? 0;
+
+  const [approvedAt, setApprovedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    setApprovedAt(null);
+  }, [a11yDoubleCheckResult]);
+
+  const canApproveForShip =
+    a11yDoubleCheckResult?.status === "PASS" &&
+    a11yDoubleCheckResult.shipReadiness.toLowerCase().includes("ship ready") &&
+    a11yDoubleCheckResult.remainingRisks.length === 0;
 
   const [ragQuestion, setRagQuestion] = useState("");
   const [ragAnswer, setRagAnswer] = useState("");
@@ -175,6 +186,34 @@ export function OrchestratorPanel({
             <div className="doublecheck-section">
               <p className="doublecheck-label">Recommended Next Step</p>
               <p className="doublecheck-body">{a11yDoubleCheckResult.recommendedNextStep}</p>
+            </div>
+          )}
+
+          {canApproveForShip && (
+            <div className="doublecheck-section doublecheck-approve-section">
+              {approvedAt ? (
+                <div className="doublecheck-approved">
+                  <p className="doublecheck-approved-title">Approved for ship</p>
+                  <p className="doublecheck-approved-meta">
+                    Approved by Alex Rivera · Engineer · {approvedAt}
+                  </p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="doublecheck-approve-btn"
+                  onClick={() => {
+                    const now = new Date();
+                    const mm = String(now.getMonth() + 1).padStart(2, "0");
+                    const dd = String(now.getDate()).padStart(2, "0");
+                    const yyyy = now.getFullYear();
+                    const time = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+                    setApprovedAt(`${mm}/${dd}/${yyyy} at ${time}`);
+                  }}
+                >
+                  Approve for Ship
+                </button>
+              )}
             </div>
           )}
         </section>

@@ -1143,3 +1143,53 @@ body {
   font-size: 11px;
   display: block;
 }
+
+/* ── A11Y DoubleCheck approve CTA ──────────────────────────────── */
+
+.doublecheck-approve-section {
+  padding-top: 12px;
+}
+
+.doublecheck-approve-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  background: rgba(33, 163, 102, 0.12);
+  color: #6ee0a8;
+  border: 1px solid rgba(33, 163, 102, 0.45);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.doublecheck-approve-btn:hover {
+  background: rgba(33, 163, 102, 0.22);
+  border-color: rgba(33, 163, 102, 0.7);
+}
+
+.doublecheck-approve-btn:focus-visible {
+  outline: 2px solid #21a366;
+  outline-offset: 2px;
+}
+
+.doublecheck-approved {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doublecheck-approved-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6ee0a8;
+}
+
+.doublecheck-approved-meta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
