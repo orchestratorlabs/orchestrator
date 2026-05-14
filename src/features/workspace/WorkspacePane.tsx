@@ -581,14 +581,24 @@ export function WorkspacePane({
             {isEvaluating ? "Evaluating..." : "Run Accessibility Check"}
           </button>
           {evaluationResult !== null ? (
-            <button
-              type="button"
-              className="workspace-action-btn a11y-doublecheck-btn"
-              onClick={onA11yDoubleCheck}
-              disabled={isDoubleChecking}
-            >
-              {isDoubleChecking ? "Running DoubleCheck…" : "Run A11Y DoubleCheck"}
-            </button>
+            <>
+              <button
+                type="button"
+                className="workspace-action-btn a11y-doublecheck-btn"
+                onClick={onA11yDoubleCheck}
+                disabled={isDoubleChecking}
+                aria-busy={isDoubleChecking}
+              >
+                Run A11Y DoubleCheck
+              </button>
+              <span
+                aria-live="polite"
+                aria-atomic="true"
+                className="sr-only"
+              >
+                {isDoubleChecking ? "A11Y DoubleCheck is running." : ""}
+              </span>
+            </>
           ) : (
             <div className="a11y-doublecheck-wrap">
               <button
