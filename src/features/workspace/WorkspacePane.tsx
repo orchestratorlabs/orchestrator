@@ -615,7 +615,7 @@ export function WorkspacePane({
                 role="tooltip"
                 className="a11y-tooltip"
               >
-                Run this Agent after the Accessibility Check.
+                Run A11Y DoubleCheck after the Accessibility Check.
               </span>
             </div>
           )}
