@@ -68,12 +68,15 @@ export function App() {
   const [isDoubleChecking, setIsDoubleChecking] = useState(false);
   const [a11yDoubleCheckResult, setA11yDoubleCheckResult] = useState<A11yDoubleCheckResult | null>(null);
   const [a11yDoubleCheckError, setA11yDoubleCheckError] = useState<string | null>(null);
+  const [evaluationSignature, setEvaluationSignature] = useState<string | null>(null);
+  const [doubleCheckEvaluationSignature, setDoubleCheckEvaluationSignature] = useState<string | null>(null);
 
   const handlePreviewThemeChange = (theme: "light" | "dark") => {
     setPreviewTheme(theme);
     setEvaluationResult(null);
     setSelectedFindingRuleId(null);
     setEvaluatedMode(null);
+    setEvaluationSignature(null);
     if (hasLoadedComponentCode) {
       setEvaluationStateMessage(
         "Preview mode changed. Run accessibility check to evaluate the current token set."
@@ -88,6 +91,7 @@ export function App() {
   setLoadedComponentName("Button");
   setSelectedFindingRuleId(null);
   setEvaluationResult(null);
+  setEvaluationSignature(null);
   setEvaluationStateMessage(
     "Component code loaded. Select a button state and run the accessibility check."
   );
@@ -119,11 +123,13 @@ export function App() {
   const currentReactCode = reactCode;
   const currentMode = previewTheme;
   const currentCssCode = currentMode === "dark" ? SAMPLE_BUTTON_CSS_DARK : cssCode;
+  const newSignature = Date.now().toString();
 
   setIsEvaluating(true);
   setSelectedFindingRuleId(null);
   setEvaluationResult(null);
   setEvaluatedMode(null);
+  setEvaluationSignature(null);
   setEvaluationStateMessage("Sending component code to mock LLM accessibility reviewer...");
 
   try {
@@ -143,6 +149,7 @@ export function App() {
     const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
     setEvaluationResult(result);
     setEvaluatedMode(currentMode);
+    setEvaluationSignature(newSignature);
 
     const passCount = result.findings.filter((f) => f.status === "Pass").length;
     const failCount = result.findings.filter((f) => f.status === "Fail").length;
@@ -160,6 +167,7 @@ export function App() {
     const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
     setEvaluationResult(result);
     setEvaluatedMode(currentMode);
+    setEvaluationSignature(newSignature);
   } finally {
     setIsEvaluating(false);
   }
@@ -191,6 +199,7 @@ export function App() {
       const parsedResult = data.xmlResult ? parseA11yDoubleCheckXml(data.xmlResult) : null;
       console.log("Parsed A11Y DoubleCheck result:", parsedResult);
       setA11yDoubleCheckResult(parsedResult);
+      setDoubleCheckEvaluationSignature(evaluationSignature);
     } catch (error) {
       console.error("A11Y DoubleCheck error:", error);
       setA11yDoubleCheckError("A11Y DoubleCheck request failed.");
@@ -234,6 +243,8 @@ export function App() {
           onSelectFinding={setSelectedFindingRuleId}
           evaluatedMode={evaluatedMode}
           a11yDoubleCheckResult={a11yDoubleCheckResult}
+          evaluationSignature={evaluationSignature}
+          doubleCheckEvaluationSignature={doubleCheckEvaluationSignature}
         />
       </main>
     </div>

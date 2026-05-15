@@ -10,6 +10,8 @@ interface OrchestratorPanelProps {
   onSelectFinding: (ruleId: string) => void;
   evaluatedMode: "light" | "dark" | null;
   a11yDoubleCheckResult: A11yDoubleCheckResult | null;
+  evaluationSignature: string | null;
+  doubleCheckEvaluationSignature: string | null;
 }
 
 const STATUS_LABEL: Record<A11yDoubleCheckResult["status"], string> = {
@@ -32,6 +34,8 @@ export function OrchestratorPanel({
   onSelectFinding,
   evaluatedMode,
   a11yDoubleCheckResult,
+  evaluationSignature,
+  doubleCheckEvaluationSignature,
 }: OrchestratorPanelProps) {
   const healthScore = evaluationResult?.healthScore ?? 0;
   const scoreRatio = Math.max(0, Math.min(healthScore, 100)) / 100;
@@ -41,6 +45,10 @@ export function OrchestratorPanel({
   const unknownCount =
     evaluationResult?.findings.filter((finding) => finding.status === "Unknown").length ?? 0;
   const failCount = evaluationResult?.findings.filter((finding) => finding.status === "Fail").length ?? 0;
+
+  const isDoubleCheckStale =
+    a11yDoubleCheckResult !== null &&
+    doubleCheckEvaluationSignature !== evaluationSignature;
 
   const [approvedAt, setApprovedAt] = useState<string | null>(null);
 
@@ -107,7 +115,37 @@ export function OrchestratorPanel({
         </div>
       </div>
 
-      {a11yDoubleCheckResult && (
+      {a11yDoubleCheckResult && isDoubleCheckStale && (
+        <section className="panel-card doublecheck-card doublecheck-card--stale">
+          <h3>A11Y DoubleCheck</h3>
+
+          <div className="doublecheck-meta">
+            <span className="doublecheck-status doublecheck-status--stale">
+              Status: Needs Re-run
+            </span>
+            <span className="doublecheck-confidence">
+              Confidence: Previous result is out of date
+            </span>
+            <span className="doublecheck-ship">
+              Ship Readiness: Pending DoubleCheck
+            </span>
+          </div>
+
+          <div className="doublecheck-section">
+            <p className="doublecheck-label">Summary</p>
+            <p className="doublecheck-body">
+              The component has changed since the last A11Y DoubleCheck. Run DoubleCheck again to validate the updated accessibility result before approving for ship.
+            </p>
+          </div>
+
+          <div className="doublecheck-section">
+            <p className="doublecheck-label">Recommended Next Step</p>
+            <p className="doublecheck-body">Run A11Y DoubleCheck again.</p>
+          </div>
+        </section>
+      )}
+
+      {a11yDoubleCheckResult && !isDoubleCheckStale && (
         <section className={`panel-card doublecheck-card doublecheck-card--${a11yDoubleCheckResult.status.toLowerCase()}`}>
           <h3>A11Y DoubleCheck</h3>
 
