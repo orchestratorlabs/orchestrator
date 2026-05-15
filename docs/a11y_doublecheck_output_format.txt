@@ -163,7 +163,7 @@ recommended_next_step:
   type: string
   guidance: >
     One sentence. Actionable. Engineer-facing.
-    If Ship Ready: "All checks pass — this component is ready to ship."
+    If Ship Ready: "All checks pass. This component is ready to ship."
     If Ship With Caution: "Review [specific risk] before shipping; primary criteria pass."
     If Do Not Ship: "Resolve [specific failure] before shipping — see remaining_risks."
 

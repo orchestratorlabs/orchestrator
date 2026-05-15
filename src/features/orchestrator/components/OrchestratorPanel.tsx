@@ -231,9 +231,9 @@ export function OrchestratorPanel({
             <div className="doublecheck-section doublecheck-approve-section">
               {approvedAt ? (
                 <div className="doublecheck-approved">
-                  <p className="doublecheck-approved-title">Approved for ship</p>
+                  <p className="doublecheck-approved-title">Component approved</p>
                   <p className="doublecheck-approved-meta">
-                    Approved by Alex Rivera · Engineer · {approvedAt}
+                    by John Doe · Engineer · {approvedAt}
                   </p>
                 </div>
               ) : (
@@ -249,7 +249,7 @@ export function OrchestratorPanel({
                     setApprovedAt(`${mm}/${dd}/${yyyy} at ${time}`);
                   }}
                 >
-                  Approve for Ship
+                  Approve Component
                 </button>
               )}
             </div>

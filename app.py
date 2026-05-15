@@ -48,7 +48,7 @@ A11Y_DOUBLECHECK_MOCK_XML = """<a11y_doublecheck_result>
     </item>
   </verified_items>
   <remaining_risks/>
-  <recommended_next_step>All checks pass — this component is ready to ship.</recommended_next_step>
+  <recommended_next_step>All checks pass. This component is ready to ship.</recommended_next_step>
 </a11y_doublecheck_result>"""
 
 # ---------------------------------------------------------------------------
@@ -370,7 +370,7 @@ def build_a11y_doublecheck_verdict(payload, selected_sources, web_lookup_results
                 "accessibility risks for the evaluated criteria."
             ),
             "remaining_risks": [],
-            "recommended_next_step": "All checks pass — this component is ready to ship.",
+            "recommended_next_step": "All checks pass. This component is ready to ship.",
             "verified_items": _criteria_from_sources(selected_sources, "PASS"),
             "dynamic_verdict_summary": f"PASS — triggered by: {'; '.join(pass_signals)}",
         }
@@ -391,7 +391,7 @@ def build_a11y_doublecheck_verdict(payload, selected_sources, web_lookup_results
                 "states.\n\n"
                 "OrchestratoR recommends updating --Text-Disabled to the approved design-system value #494949."
             )
-            next_step = "Update --Text-Disabled to the approved design-system value #494949."
+            next_step = "Update --Text-Disabled to the approved design-system value #494949. Then rerun Accessibility Check."
             fail_summary = (
                 "A11Y DoubleCheck found a disabled text contrast issue that falls below "
                 "OrchestratoR's design-system readability threshold."
