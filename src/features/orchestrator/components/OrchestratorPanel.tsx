@@ -362,7 +362,7 @@ export function OrchestratorPanel({
 
       <section className="panel-card">
         <h3>Findings</h3>
-        <p className="muted">Display order for MVP: Pass first, Unknown second, Fail last.</p>
+
         {evaluationResult ? (
           <ul className="findings-list">
             {evaluationResult.findings.map((finding) => (
@@ -412,7 +412,6 @@ export function OrchestratorPanel({
                 <p className="muted">{finding.evidence}</p>
                 <p className="muted">Severity: {finding.severity}</p>
                 <p className="muted">Recommendation: {finding.recommendation}</p>
-                <p className="muted">Source: {finding.sourceReference}</p>
               </li>
             ))}
           </ul>
