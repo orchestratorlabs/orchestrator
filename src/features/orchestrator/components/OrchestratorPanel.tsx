@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { A11yDoubleCheckResult, EvaluationResult } from "../types/evaluation";
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
 
@@ -60,6 +60,14 @@ export function OrchestratorPanel({
     a11yDoubleCheckResult?.status === "PASS" &&
     a11yDoubleCheckResult.shipReadiness.toLowerCase().includes("ship ready") &&
     a11yDoubleCheckResult.remainingRisks.length === 0;
+
+  const STATUS_SORT_ORDER: Record<string, number> = { Fail: 0, Unknown: 1, Pass: 2 };
+  const sortedFindings = useMemo(() => {
+    if (!evaluationResult) return [];
+    return [...evaluationResult.findings].sort(
+      (a, b) => (STATUS_SORT_ORDER[a.status] ?? 3) - (STATUS_SORT_ORDER[b.status] ?? 3)
+    );
+  }, [evaluationResult]);
 
   const [ragQuestion, setRagQuestion] = useState("");
   const [ragAnswer, setRagAnswer] = useState("");
@@ -365,7 +373,7 @@ export function OrchestratorPanel({
 
         {evaluationResult ? (
           <ul className="findings-list">
-            {evaluationResult.findings.map((finding) => (
+            {sortedFindings.map((finding) => (
               <li
                 key={finding.ruleId}
                 className={`finding ${finding.status.toLowerCase()} ${
