@@ -1,6 +1,13 @@
-# OrchestratoR™ — MVP Architecture Diagram
+**Technical Diagram**
+
+# OrchestratoR™ MVP Architecture
+
+> Markdown Summary Flow: Detect → Fix → DoubleCheck → Ship
 
 ```mermaid
+---
+title: "OrchestratoR™ MVP Architecture — AI Accessibility Evaluation + A11Y DoubleCheck Agent Flow"
+---
 %%{init: {'theme': 'default', 'themeVariables': {'fontSize': '16px'}}}%%
 flowchart TD
 
@@ -38,13 +45,13 @@ flowchart TD
     HR_APPR["Approve for Ship"]
   end
 
-  FE_CHECK --> EVAL_ENGINE
+  FE_CHECK -->|"Component code"| EVAL_ENGINE
   EVAL_ENGINE --> BE_API
   SOT_REFS --> BE_RAG
-  BE_RAG --> EVAL_CHECKS
-  EVAL_SCORE --> DC_PASS
-  FE_DC --> DC_PASS
-  DC_OUT --> HR_APPR
+  BE_RAG -->|"Grounded evidence"| EVAL_CHECKS
+  EVAL_SCORE -->|"Accessibility results"| DC_PASS
+  FE_DC -->|"Second-pass validation"| DC_PASS
+  DC_OUT -->|"Approval decision"| HR_APPR
 ```
 
 ## How it works
