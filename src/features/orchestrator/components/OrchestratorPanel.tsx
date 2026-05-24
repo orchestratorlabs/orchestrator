@@ -241,7 +241,7 @@ export function OrchestratorPanel({
                 <div className="doublecheck-approved">
                   <p className="doublecheck-approved-title">Component approved</p>
                   <p className="doublecheck-approved-meta">
-                    by John Doe · Engineer · {approvedAt}
+                    by John Doe · Developer · {approvedAt}
                   </p>
                 </div>
               ) : (
