@@ -520,7 +520,7 @@ body {
   border-left: 1px solid var(--border);
   background: var(--surface);
   overflow: auto;
-  padding: 14px;
+  padding: 0 14px 14px;
 }
 
 .orchestrator-panel.closed {
@@ -531,7 +531,13 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  padding: 14px 0 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
 }
 
 .panel-logo {
