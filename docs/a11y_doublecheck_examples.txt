@@ -25,30 +25,30 @@ result: PASS
 
 context:
   orchestrator_finding: >
-    Disabled button text uses color token --color-text-disabled.
-    Measured contrast ratio: 2.1:1 against background --color-surface-primary.
-    WCAG 1.4.3 requires 4.5:1 for normal text.
-    Finding: FAIL.
+    Not a WCAG failure — design-system readability recommendation.
+    WCAG 2.1 SC 1.4.3 exempts inactive user interface components from minimum contrast requirements,
+    so the disabled button label does not fail WCAG compliance.
+    OrchestratoR flags this as a design-system readability recommendation:
+    --Text-Disabled (#8C8C8C) against --Bg-Disabled (#BDBDBD) produces a contrast ratio of 1.79:1,
+    which is below OrchestratoR's design-system readability threshold.
+    Approved fix: update --Text-Disabled to #494949.
   current_code: >
     <button disabled className="btn btn--disabled">Submit</button>
   current_tokens: >
-    --color-text-disabled: #767676;
-    --color-surface-primary: #FFFFFF;
+    --Text-Disabled: #8C8C8C;
+    --Bg-Disabled: #BDBDBD;
   engineer_fix_applied: >
     Token updated:
-    --color-text-disabled: #595959;
-    Measured new contrast ratio: 7.0:1 against #FFFFFF.
+    --Text-Disabled: #494949;
+    Measured new contrast ratio against --Bg-Disabled (#BDBDBD): meets design-system readability threshold.
 
 validation:
   source_checked: https://www.w3.org/TR/WCAG21/#contrast-minimum
   evidence: >
-    WCAG 1.4.3 requires a contrast ratio of at least 4.5:1 for normal text.
-    Exception: text or images of text that are part of an inactive user
-    interface component have no contrast requirement.
-    However, OrchestratoR applies a conservative validation that disabled
-    text should still meet 4.5:1 to avoid excluding low-vision users who
-    rely on readable disabled state cues.
-    Updated token #595959 on #FFFFFF yields 7.0:1. Passes.
+    WCAG 2.1 SC 1.4.3 exempts inactive user interface components from minimum contrast requirements.
+    The disabled button label does not fail WCAG compliance.
+    OrchestratoR flags this as a design-system readability recommendation only.
+    Approved design-system fix: update --Text-Disabled to #494949.
 
 verdict:
   status: PASS
@@ -65,9 +65,11 @@ result: FAIL
 
 context:
   orchestrator_finding: >
-    Disabled button text uses color token --color-text-disabled.
-    Measured contrast ratio: 2.1:1 against background --color-surface-primary.
-    WCAG 1.4.3 requires 4.5:1. Finding: FAIL.
+    Not a WCAG failure — design-system readability recommendation.
+    WCAG 2.1 SC 1.4.3 exempts inactive user interface components from minimum contrast requirements.
+    OrchestratoR flags --Text-Disabled against --Bg-Disabled as a design-system readability recommendation.
+    Current token pair is below OrchestratoR's design-system readability threshold.
+    Approved fix: update --Text-Disabled to #494949.
   current_code: >
     <button disabled className="btn btn--disabled">Submit</button>
   current_tokens: >
@@ -76,23 +78,24 @@ context:
   engineer_fix_applied: >
     Token updated from original value to #999999.
     Measured new contrast ratio: 2.85:1 against #FFFFFF.
+    This update did not reach the approved design-system value of #494949.
 
 validation:
   source_checked: https://www.w3.org/TR/WCAG21/#contrast-minimum
   evidence: >
-    WCAG 1.4.3 requires 4.5:1 for normal text.
-    #999999 on #FFFFFF yields approximately 2.85:1.
-    This does not meet the 4.5:1 threshold.
-    The fix did not resolve the failure.
+    WCAG 2.1 SC 1.4.3 exempts inactive user interface components from minimum contrast requirements.
+    This is not a WCAG compliance failure.
+    OrchestratoR flags this as a design-system readability recommendation.
+    The attempted fix (#999999) did not reach the approved design-system value of #494949.
 
 verdict:
   status: FAIL
   confidence_score: 97
   ship_readiness: Do Not Ship
   remaining_risk: >
-    Disabled text contrast still insufficient at 2.85:1.
-    Token must be darkened further. Recommended minimum: #767676 yields 4.54:1.
-    Preferred: #595959 yields 7.0:1.
+    Disabled text contrast still below OrchestratoR's design-system readability threshold at 2.85:1.
+    Note: WCAG 2.1 SC 1.4.3 exempts inactive components — this is not a WCAG compliance failure.
+    The approved design-system recommendation is to update --Text-Disabled to #494949.
 
 ========================================
 EXAMPLE 3 — Focus Ring Contrast Verified
