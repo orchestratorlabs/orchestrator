@@ -70,6 +70,8 @@ export function App() {
   const [a11yDoubleCheckError, setA11yDoubleCheckError] = useState<string | null>(null);
   const [evaluationSignature, setEvaluationSignature] = useState<string | null>(null);
   const [doubleCheckEvaluationSignature, setDoubleCheckEvaluationSignature] = useState<string | null>(null);
+  const [claudeAnalysis, setClaudeAnalysis] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handlePreviewThemeChange = (theme: "light" | "dark") => {
     setPreviewTheme(theme);
@@ -130,46 +132,54 @@ export function App() {
   setEvaluationResult(null);
   setEvaluatedMode(null);
   setEvaluationSignature(null);
-  setEvaluationStateMessage("Sending component code to mock LLM accessibility reviewer...");
+  setClaudeAnalysis(null);
+  setEvaluationStateMessage("Running accessibility evaluation...");
 
+  const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
+  const passCount = result.findings.filter((f) => f.status === "Pass").length;
+  const failCount = result.findings.filter((f) => f.status === "Fail").length;
+  const unknownCount = result.unknownCount;
+  const scoreValue = result.healthScore;
+
+  setEvaluationResult(result);
+  setEvaluatedMode(currentMode);
+  setEvaluationSignature(newSignature);
+  setEvaluationStateMessage(
+    `Complete: ${scoreValue}/100 — ${passCount} pass, ${unknownCount} unknown, ${failCount} fail.`
+  );
+  setIsEvaluating(false);
+
+  setIsAnalyzing(true);
   try {
-    const response = await fetch("http://127.0.0.1:5001/mock-llm", {
+    const question = failCount > 0
+      ? "Explain the accessibility failures found in this component and how to fix them."
+      : "Explain why this component passed all accessibility checks.";
+
+    const response = await fetch("http://127.0.0.1:5001/rag-query", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        componentCode: currentReactCode,
-        cssCode: currentCssCode,
+        question,
+        useClaude: true,
+        componentContext: `Score: ${scoreValue}/100. Pass: ${passCount}, Unknown: ${unknownCount}, Fail: ${failCount}.`,
+        evaluationContext: {
+          evaluatedMode: currentMode,
+          score: scoreValue,
+          passCount,
+          unknownCount,
+          failCount,
+          findings: result.findings,
+        },
       }),
     });
-
-    await response.json();
-
-    const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
-    setEvaluationResult(result);
-    setEvaluatedMode(currentMode);
-    setEvaluationSignature(newSignature);
-
-    const passCount = result.findings.filter((f) => f.status === "Pass").length;
-    const failCount = result.findings.filter((f) => f.status === "Fail").length;
-    const unknownCount = result.unknownCount;
-    const scoreValue = result.healthScore;
-
-    setEvaluationStateMessage(
-      `Complete: ${scoreValue}/100 — Score ${scoreValue}/100 with ${passCount} pass, ${unknownCount} unknown, and ${failCount} fail findings.`
-    );
-  } catch (error) {
-    setEvaluationStateMessage(
-      "Mock LLM request failed. Running local accessibility check instead."
-    );
-
-    const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
-    setEvaluationResult(result);
-    setEvaluatedMode(currentMode);
-    setEvaluationSignature(newSignature);
+    const data = await response.json();
+    if (response.ok && data.answer) {
+      setClaudeAnalysis(data.answer);
+    }
+  } catch {
+    // analysis is best-effort, don't surface error
   } finally {
-    setIsEvaluating(false);
+    setIsAnalyzing(false);
   }
 };
 
@@ -245,6 +255,8 @@ export function App() {
           a11yDoubleCheckResult={a11yDoubleCheckResult}
           evaluationSignature={evaluationSignature}
           doubleCheckEvaluationSignature={doubleCheckEvaluationSignature}
+          claudeAnalysis={claudeAnalysis}
+          isAnalyzing={isAnalyzing}
         />
       </main>
     </div>

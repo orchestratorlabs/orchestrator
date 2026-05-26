@@ -5,6 +5,9 @@ import re
 import urllib.error
 import urllib.request
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pathlib import Path
@@ -731,6 +734,25 @@ def call_claude(question, component_type, registry_text, component_rag_text, com
         question, component_type, registry_text, component_rag_text, component_context, evaluation_context
     )
 
+    print("\n" + "=" * 80)
+    print("[OrchestratoR] RAG PAYLOAD — SENDING TO LLM")
+    print("=" * 80)
+    print(f"  Model : {get_claude_model()}")
+    print(f"  Question        : {question}")
+    print(f"  Component type  : {component_type}")
+    print(f"  Component ctx   : {component_context or 'Not provided'}")
+    print(f"  Registry text   : {len(registry_text)} chars")
+    print(f"  RAG text        : {len(component_rag_text)} chars")
+    if evaluation_context:
+        print(f"  Eval score      : {evaluation_context.get('score', 'N/A')}/100")
+        print(f"  Eval mode       : {evaluation_context.get('evaluatedMode', 'N/A')}")
+        print(f"  Pass/Unknown/Fail: {evaluation_context.get('passCount', 0)} / {evaluation_context.get('unknownCount', 0)} / {evaluation_context.get('failCount', 0)}")
+    print("-" * 80)
+    print("[OrchestratoR] FULL PROMPT:")
+    print("-" * 80)
+    print(prompt)
+    print("=" * 80 + "\n")
+
     raw = None
     try:
         response = client.messages.create(
@@ -739,6 +761,11 @@ def call_claude(question, component_type, registry_text, component_rag_text, com
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.content[0].text.strip()
+        print("\n" + "=" * 80)
+        print("[OrchestratoR] LLM RAW RESPONSE:")
+        print("=" * 80)
+        print(raw)
+        print("=" * 80 + "\n")
         parsed = parse_claude_json_response(raw)
         parsed["apiMode"] = "claude"
         parsed.setdefault("status", "success")
