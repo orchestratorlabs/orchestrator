@@ -802,6 +802,175 @@ def call_claude(question, component_type, registry_text, component_rag_text, com
 
 
 # ---------------------------------------------------------------------------
+# A11Y DoubleCheck — Claude integration
+# ---------------------------------------------------------------------------
+
+def _extract_a11y_xml(raw_text):
+    """Extract the <a11y_doublecheck_result> XML block from Claude's response."""
+    text = raw_text.strip()
+    start = text.find("<a11y_doublecheck_result>")
+    end = text.rfind("</a11y_doublecheck_result>")
+    if start == -1 or end == -1:
+        raise ValueError("No <a11y_doublecheck_result> block found in Claude response.")
+    return text[start:end + len("</a11y_doublecheck_result>")]
+
+
+def _parse_a11y_xml_to_verdict(xml_string):
+    """Parse key fields from the XML verdict for the structured JSON response."""
+    def _tag(tag, text):
+        m = re.search(rf"<{tag}>(.*?)</{tag}>", text, re.DOTALL)
+        return m.group(1).strip() if m else ""
+
+    status = _tag("status", xml_string)
+    ship_readiness = _tag("ship_readiness", xml_string)
+    summary = _tag("summary", xml_string)
+    try:
+        confidence_score = int(_tag("confidence_score", xml_string))
+    except (ValueError, TypeError):
+        confidence_score = 0
+
+    return {
+        "status": status or "PARTIAL",
+        "confidence_score": confidence_score,
+        "ship_readiness": ship_readiness or "Ship With Caution",
+        "summary": summary,
+        "dynamic_verdict_summary": f"Claude A11Y DoubleCheck — {status} (confidence {confidence_score})",
+    }
+
+
+def build_a11y_doublecheck_prompt(payload, rag_contents, selected_sources, web_lookup_results):
+    """Build the prompt sent to Claude for A11Y DoubleCheck validation."""
+    component_code = (payload.get("componentCode") or "").strip()
+    css_code = (payload.get("cssCode") or "").strip()
+    findings = (payload.get("accessibilityFindings") or "").strip()
+    recommended_fix = (payload.get("recommendedFix") or "").strip()
+    theme_mode = (payload.get("selectedThemeMode") or "Not specified").strip()
+    evaluation_context = payload.get("evaluationContext") or {}
+
+    sources_list = "\n".join(f"  - {s}" for s in selected_sources)
+    web_evidence_lines = []
+    for r in web_lookup_results:
+        web_evidence_lines.append(
+            f"  [{r.get('lookupStatus', 'unknown')}] {r.get('url', '')}\n"
+            f"    {r.get('evidencePreview', '')}"
+        )
+    web_evidence = "\n".join(web_evidence_lines) if web_evidence_lines else "No web lookup results available."
+
+    registry_text = rag_contents.get("a11y_doublecheck_registry.txt", "")
+    examples_text = rag_contents.get("a11y_doublecheck_examples.txt", "")
+    output_format_text = rag_contents.get("a11y_doublecheck_output_format.txt", "")
+    response_template_text = rag_contents.get("a11y_doublecheck_response_template.txt", "")
+
+    eval_json = json.dumps(evaluation_context, indent=2) if evaluation_context else "Not provided."
+
+    return f"""You are the A11Y DoubleCheck Agent for OrchestratoR.
+
+CRITICAL OUTPUT RULE: Your entire response must be ONLY the XML block defined in the output format spec below.
+Do NOT include any text before <a11y_doublecheck_result> or after </a11y_doublecheck_result>.
+Do NOT use markdown formatting inside the XML.
+
+---
+AGENT REGISTRY (your identity, trusted sources, and validation scope):
+{registry_text[:2000]}
+
+---
+OUTPUT FORMAT SPECIFICATION (conform to this schema exactly):
+{output_format_text}
+
+---
+AGENT OPERATING PROCEDURE (follow these steps in order):
+{response_template_text[:2000]}
+
+---
+VALIDATION EXAMPLES (ground your judgment on these concrete examples):
+{examples_text[:3000]}
+
+---
+INPUTS FOR THIS VALIDATION RUN:
+
+Theme Mode: {theme_mode}
+
+OrchestratoR Accessibility Finding:
+{findings or "Not provided."}
+
+Recommended Fix:
+{recommended_fix or "Not provided."}
+
+Current Component Code:
+{component_code or "Not provided."}
+
+Current CSS / Design Tokens:
+{css_code or "Not provided."}
+
+Evaluation Context (health score and findings summary):
+{eval_json}
+
+---
+WEB LOOKUP EVIDENCE (from trusted W3C/WAI sources):
+Selected sources:
+{sources_list}
+
+Results:
+{web_evidence}
+
+---
+Perform the validation now and return only the XML response block.
+"""
+
+
+def call_claude_a11y_doublecheck(payload, rag_contents, selected_sources, web_lookup_results):
+    """
+    Call Claude for A11Y DoubleCheck validation.
+    Returns (xml_string, verdict_dict, api_mode, error_message).
+    xml_string and verdict_dict are None when api_mode is 'mock' or 'error'.
+    """
+    client = get_claude_client()
+    if client is None:
+        return None, None, "mock", None
+
+    prompt = build_a11y_doublecheck_prompt(payload, rag_contents, selected_sources, web_lookup_results)
+
+    print("\n" + "=" * 80)
+    print("[A11Y DoubleCheck] RAG PAYLOAD — SENDING TO CLAUDE")
+    print("=" * 80)
+    print(f"  Model         : {get_claude_model()}")
+    print(f"  Theme mode    : {payload.get('selectedThemeMode', 'Not specified')}")
+    print(f"  Findings      : {(payload.get('accessibilityFindings') or '')[:120]}")
+    print(f"  RAG files     : {list(rag_contents.keys())}")
+    print(f"  Sources       : {selected_sources}")
+    print("-" * 80)
+    print("[A11Y DoubleCheck] FULL PROMPT:")
+    print("-" * 80)
+    print(prompt)
+    print("=" * 80 + "\n")
+
+    raw = None
+    try:
+        response = client.messages.create(
+            model=get_claude_model(),
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text.strip()
+        print("\n" + "=" * 80)
+        print("[A11Y DoubleCheck] CLAUDE RAW RESPONSE:")
+        print("=" * 80)
+        print(raw)
+        print("=" * 80 + "\n")
+
+        xml_string = _extract_a11y_xml(raw)
+        verdict_dict = _parse_a11y_xml_to_verdict(xml_string)
+        return xml_string, verdict_dict, "claude", None
+    except Exception as e:
+        error_message = str(e)
+        raw_preview = raw[:300] if raw else None
+        print(f"[A11Y DoubleCheck] Claude error — {type(e).__name__}: {error_message}")
+        if raw_preview:
+            print(f"[A11Y DoubleCheck] Raw preview: {raw_preview}")
+        return None, None, "error", error_message
+
+
+# ---------------------------------------------------------------------------
 # Static fallback response
 # ---------------------------------------------------------------------------
 
@@ -1095,6 +1264,7 @@ def a11y_doublecheck():
     recommended_fix = data.get("recommendedFix", "")
 
     # Load all four Phase 3 RAG files from docs/
+    rag_contents = {}
     loaded_rag_files = []
     missing_rag_files = []
     for file_name in A11Y_DOUBLECHECK_RAG_FILES:
@@ -1102,6 +1272,7 @@ def a11y_doublecheck():
         content = load_rag_file(file_path)
         if content is not None:
             loaded_rag_files.append(file_name)
+            rag_contents[file_name] = content
         else:
             missing_rag_files.append(file_name)
 
@@ -1119,19 +1290,28 @@ def a11y_doublecheck():
     web_lookup_results = perform_web_lookup(selected_sources)
 
     any_success = any(r["lookupStatus"] == "success" for r in web_lookup_results)
-    api_mode = "web_lookup_dynamic" if any_success else "web_lookup_fallback_dynamic"
 
-    # Build dynamic verdict based on payload content
-    verdict = build_a11y_doublecheck_verdict(data, selected_sources, web_lookup_results)
+    # Try Claude first; fall back to rules-based verdict when no API key or on error
+    xml_string, claude_verdict, api_mode, error_message = call_claude_a11y_doublecheck(
+        data, rag_contents, selected_sources, web_lookup_results
+    )
+
+    if xml_string and claude_verdict:
+        verdict = claude_verdict
+        xml_result = xml_string
+    else:
+        # Fallback: rules-based verdict (no API key or Claude error)
+        if api_mode in ("mock", "error"):
+            api_mode = "web_lookup_dynamic" if any_success else "web_lookup_fallback_dynamic"
+        verdict = build_a11y_doublecheck_verdict(data, selected_sources, web_lookup_results)
+        evidence_summary = _build_evidence_summary(accessibility_findings, recommended_fix, any_success)
+        xml_result = _build_a11y_doublecheck_xml(selected_sources, evidence_summary, verdict)
 
     print(f"[A11Y DoubleCheck] selected_sources: {selected_sources}")
     print(f"[A11Y DoubleCheck] apiMode: {api_mode}")
-    print(f"[A11Y DoubleCheck] verdict status: {verdict['status']}")
-    print(f"[A11Y DoubleCheck] confidence_score: {verdict['confidence_score']}")
-    print(f"[A11Y DoubleCheck] ship_readiness: {verdict['ship_readiness']}")
-
-    evidence_summary = _build_evidence_summary(accessibility_findings, recommended_fix, any_success)
-    xml_result = _build_a11y_doublecheck_xml(selected_sources, evidence_summary, verdict)
+    print(f"[A11Y DoubleCheck] verdict status: {verdict.get('status', 'unknown')}")
+    print(f"[A11Y DoubleCheck] confidence_score: {verdict.get('confidence_score', 'unknown')}")
+    print(f"[A11Y DoubleCheck] ship_readiness: {verdict.get('ship_readiness', 'unknown')}")
 
     return jsonify({
         "status": "success",
@@ -1140,7 +1320,7 @@ def a11y_doublecheck():
         "loadedRagFiles": loaded_rag_files,
         "sourcesChecked": selected_sources,
         "webLookupResults": web_lookup_results,
-        "dynamicVerdictSummary": verdict["dynamic_verdict_summary"],
+        "dynamicVerdictSummary": verdict.get("dynamic_verdict_summary", ""),
     })
 
 
