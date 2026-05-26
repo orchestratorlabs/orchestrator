@@ -12,6 +12,8 @@ interface OrchestratorPanelProps {
   a11yDoubleCheckResult: A11yDoubleCheckResult | null;
   evaluationSignature: string | null;
   doubleCheckEvaluationSignature: string | null;
+  claudeSummary: string | null;
+  isClaudeSummaryLoading: boolean;
 }
 
 const STATUS_LABEL: Record<A11yDoubleCheckResult["status"], string> = {
@@ -36,6 +38,8 @@ export function OrchestratorPanel({
   a11yDoubleCheckResult,
   evaluationSignature,
   doubleCheckEvaluationSignature,
+  claudeSummary,
+  isClaudeSummaryLoading,
 }: OrchestratorPanelProps) {
   const healthScore = evaluationResult?.healthScore ?? 0;
   const scoreRatio = Math.max(0, Math.min(healthScore, 100)) / 100;
@@ -323,7 +327,23 @@ export function OrchestratorPanel({
             )}
           </div>
         </div>
-        {evaluationResult && <p className="muted score-summary">{evaluationResult.summary}</p>}
+        {evaluationResult && (
+          <p className="muted score-summary">
+            {claudeSummary && !isClaudeSummaryLoading ? (
+              <>
+                {claudeSummary}
+                <span className="score-summary-claude-badge"> · Agent</span>
+              </>
+            ) : (
+              <>
+                {evaluationResult.summary}
+                {isClaudeSummaryLoading && (
+                  <span className="score-summary-agent-loading"> · · ·</span>
+                )}
+              </>
+            )}
+          </p>
+        )}
       </section>
 
       <section className="panel-card ask-orchestrator-card">

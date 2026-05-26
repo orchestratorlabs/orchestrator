@@ -70,6 +70,8 @@ export function App() {
   const [a11yDoubleCheckError, setA11yDoubleCheckError] = useState<string | null>(null);
   const [evaluationSignature, setEvaluationSignature] = useState<string | null>(null);
   const [doubleCheckEvaluationSignature, setDoubleCheckEvaluationSignature] = useState<string | null>(null);
+  const [claudeSummary, setClaudeSummary] = useState<string | null>(null);
+  const [isClaudeSummaryLoading, setIsClaudeSummaryLoading] = useState(false);
 
   const handlePreviewThemeChange = (theme: "light" | "dark") => {
     setPreviewTheme(theme);
@@ -77,6 +79,8 @@ export function App() {
     setSelectedFindingRuleId(null);
     setEvaluatedMode(null);
     setEvaluationSignature(null);
+    setClaudeSummary(null);
+    setIsClaudeSummaryLoading(false);
     if (hasLoadedComponentCode) {
       setEvaluationStateMessage(
         "Preview mode changed. Run accessibility check to evaluate the current token set."
@@ -92,6 +96,8 @@ export function App() {
   setSelectedFindingRuleId(null);
   setEvaluationResult(null);
   setEvaluationSignature(null);
+  setClaudeSummary(null);
+  setIsClaudeSummaryLoading(false);
   setEvaluationStateMessage(
     "Component code loaded. Select a button state and run the accessibility check."
   );
@@ -130,6 +136,8 @@ export function App() {
   setEvaluationResult(null);
   setEvaluatedMode(null);
   setEvaluationSignature(null);
+  setClaudeSummary(null);
+  setIsClaudeSummaryLoading(false);
   setEvaluationStateMessage("Running accessibility evaluation...");
 
   const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
@@ -145,6 +153,34 @@ export function App() {
     `Complete: ${scoreValue}/100 — ${passCount} pass, ${unknownCount} unknown, ${failCount} fail.`
   );
   setIsEvaluating(false);
+
+  setIsClaudeSummaryLoading(true);
+  try {
+    const response = await fetch("http://127.0.0.1:5001/rag-query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question: "Summarize the accessibility health result for this component.",
+        useClaude: true,
+        componentContext: `Score: ${scoreValue}/100 — ${passCount} pass, ${unknownCount} unknown, ${failCount} fail.`,
+        evaluationContext: {
+          evaluatedMode: currentMode,
+          score: scoreValue,
+          passCount,
+          unknownCount,
+          failCount,
+          findings: result.findings,
+        },
+      }),
+    });
+    const data = await response.json();
+    const summary = data?.outputFormat?.summary;
+    if (summary) setClaudeSummary(summary);
+  } catch {
+    // silently fail — local summary remains
+  } finally {
+    setIsClaudeSummaryLoading(false);
+  }
 };
 
   const handleA11yDoubleCheck = async () => {
@@ -219,6 +255,8 @@ export function App() {
           a11yDoubleCheckResult={a11yDoubleCheckResult}
           evaluationSignature={evaluationSignature}
           doubleCheckEvaluationSignature={doubleCheckEvaluationSignature}
+          claudeSummary={claudeSummary}
+          isClaudeSummaryLoading={isClaudeSummaryLoading}
         />
       </main>
     </div>

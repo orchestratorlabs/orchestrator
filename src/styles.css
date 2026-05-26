@@ -827,6 +827,26 @@ body {
   margin: 10px 0 0;
 }
 
+.score-summary-claude-badge {
+  color: #4f8cff;
+  font-size: 0.75em;
+  letter-spacing: 0.03em;
+}
+
+.score-summary-agent-loading {
+  color: #4f8cff;
+  font-size: 2.5em;
+  letter-spacing: -0.05em;
+  position: relative;
+  top: 7px;
+  animation: agent-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes agent-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
 @media (max-width: 420px) {
   .score-shell {
     flex-direction: column;

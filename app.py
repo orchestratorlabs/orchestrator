@@ -640,7 +640,7 @@ RESPONSE GUIDANCE (DISABLED CONTRAST — DESIGN-SYSTEM RECOMMENDATION):
 - The Light mode disabled token pair is --Text-Disabled (#8C8C8C) against --Bg-Disabled (#BDBDBD), producing a contrast ratio of 1.79:1, which is below OrchestratoR's design-system readability threshold.
 - The approved design-system recommendation is to update --Text-Disabled to #494949.
 - Do NOT recommend #767676 or any other value — use #494949 only.
-- Lead with: "Not a WCAG failure — design-system readability recommendation."
+- For outputFormat.summary use exactly this text: "Not a WCAG failure — disabled controls are exempt. OrchestratoR flags this as a design-system readability recommendation. Recommended token: #494949."
 """
         return """
 RESPONSE GUIDANCE (FAIL STATE):
@@ -674,7 +674,7 @@ Required JSON shape:
   "apiMode": "claude",
   "outputFormat": {{
     "accessibilityHealthScore": "<guidance string>",
-    "summary": "<one sentence describing the accessibility issue or rule>",
+    "summary": "<one short sentence, max 20 words, direct and specific to the finding>",
     "findings": {{
       "pass": [],
       "unknown": [],
