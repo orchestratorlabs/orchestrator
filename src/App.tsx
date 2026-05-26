@@ -70,8 +70,6 @@ export function App() {
   const [a11yDoubleCheckError, setA11yDoubleCheckError] = useState<string | null>(null);
   const [evaluationSignature, setEvaluationSignature] = useState<string | null>(null);
   const [doubleCheckEvaluationSignature, setDoubleCheckEvaluationSignature] = useState<string | null>(null);
-  const [claudeAnalysis, setClaudeAnalysis] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handlePreviewThemeChange = (theme: "light" | "dark") => {
     setPreviewTheme(theme);
@@ -132,7 +130,6 @@ export function App() {
   setEvaluationResult(null);
   setEvaluatedMode(null);
   setEvaluationSignature(null);
-  setClaudeAnalysis(null);
   setEvaluationStateMessage("Running accessibility evaluation...");
 
   const result = evaluateButtonAccessibility(currentReactCode, currentCssCode);
@@ -148,39 +145,6 @@ export function App() {
     `Complete: ${scoreValue}/100 — ${passCount} pass, ${unknownCount} unknown, ${failCount} fail.`
   );
   setIsEvaluating(false);
-
-  setIsAnalyzing(true);
-  try {
-    const question = failCount > 0
-      ? "Explain the accessibility failures found in this component and how to fix them."
-      : "Explain why this component passed all accessibility checks.";
-
-    const response = await fetch("http://127.0.0.1:5001/rag-query", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question,
-        useClaude: true,
-        componentContext: `Score: ${scoreValue}/100. Pass: ${passCount}, Unknown: ${unknownCount}, Fail: ${failCount}.`,
-        evaluationContext: {
-          evaluatedMode: currentMode,
-          score: scoreValue,
-          passCount,
-          unknownCount,
-          failCount,
-          findings: result.findings,
-        },
-      }),
-    });
-    const data = await response.json();
-    if (response.ok && data.answer) {
-      setClaudeAnalysis(data.answer);
-    }
-  } catch {
-    // analysis is best-effort, don't surface error
-  } finally {
-    setIsAnalyzing(false);
-  }
 };
 
   const handleA11yDoubleCheck = async () => {
@@ -255,8 +219,6 @@ export function App() {
           a11yDoubleCheckResult={a11yDoubleCheckResult}
           evaluationSignature={evaluationSignature}
           doubleCheckEvaluationSignature={doubleCheckEvaluationSignature}
-          claudeAnalysis={claudeAnalysis}
-          isAnalyzing={isAnalyzing}
         />
       </main>
     </div>

@@ -12,8 +12,6 @@ interface OrchestratorPanelProps {
   a11yDoubleCheckResult: A11yDoubleCheckResult | null;
   evaluationSignature: string | null;
   doubleCheckEvaluationSignature: string | null;
-  claudeAnalysis: string | null;
-  isAnalyzing: boolean;
 }
 
 const STATUS_LABEL: Record<A11yDoubleCheckResult["status"], string> = {
@@ -38,8 +36,6 @@ export function OrchestratorPanel({
   a11yDoubleCheckResult,
   evaluationSignature,
   doubleCheckEvaluationSignature,
-  claudeAnalysis,
-  isAnalyzing,
 }: OrchestratorPanelProps) {
   const healthScore = evaluationResult?.healthScore ?? 0;
   const scoreRatio = Math.max(0, Math.min(healthScore, 100)) / 100;
@@ -328,19 +324,6 @@ export function OrchestratorPanel({
           </div>
         </div>
         {evaluationResult && <p className="muted score-summary">{evaluationResult.summary}</p>}
-      </section>
-
-      <section className="panel-card">
-        <h3>Analysis</h3>
-        {isAnalyzing ? (
-          <p className="muted">Analyzing with Claude...</p>
-        ) : claudeAnalysis ? (
-          <p>{claudeAnalysis}</p>
-        ) : evaluationResult ? (
-          <p className="muted">Analysis unavailable.</p>
-        ) : (
-          <p className="muted">Run evaluation to get AI analysis.</p>
-        )}
       </section>
 
       <section className="panel-card ask-orchestrator-card">
