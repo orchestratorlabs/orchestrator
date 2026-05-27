@@ -880,10 +880,13 @@ body {
 
 .score-interp-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
+  top: 50%;
+  left: 100%;
+  right: auto;
+  bottom: auto;
+  margin-left: 8px;
   width: max-content;
-  max-width: 240px;
+  max-width: 210px;
   background: #1a2a4a;
   color: #dfeaff;
   border: 1px solid #356ee5;
@@ -893,7 +896,7 @@ body {
   line-height: 1.4;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(4px);
+  transform: translateY(-50%) translateX(-4px);
   transition: opacity 120ms ease, transform 120ms ease;
   white-space: normal;
   z-index: 10;
@@ -903,7 +906,7 @@ body {
 .score-interp-info-wrap:focus-within .score-interp-tooltip,
 .score-interp-info-wrap--open .score-interp-tooltip {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(-50%) translateX(0);
 }
 
 .score-summary-claude-badge {
