@@ -73,6 +73,7 @@ export function OrchestratorPanel({
     );
   }, [evaluationResult]);
 
+  const [scoreInterpTooltipOpen, setScoreInterpTooltipOpen] = useState(false);
   const [ragQuestion, setRagQuestion] = useState("");
   const [ragAnswer, setRagAnswer] = useState("");
   const [isRagLoading, setIsRagLoading] = useState(false);
@@ -336,7 +337,28 @@ export function OrchestratorPanel({
 
       {evaluationResult && (isClaudeSummaryLoading || claudeSummary) && (
         <section className="panel-card">
-          <h3>Accessibility Score Interpretation</h3>
+          <div className="score-interp-heading">
+            <h3>Score Summary</h3>
+            <div className={`score-interp-info-wrap${scoreInterpTooltipOpen ? " score-interp-info-wrap--open" : ""}`}>
+              <button
+                type="button"
+                className="score-interp-info-btn"
+                aria-label="Explain Score Summary"
+                aria-describedby="score-interp-tooltip-text"
+                onClick={() => setScoreInterpTooltipOpen((prev) => !prev)}
+              >
+                i
+              </button>
+              <div
+                id="score-interp-tooltip-text"
+                role="tooltip"
+                className="score-interp-tooltip"
+                aria-hidden={!scoreInterpTooltipOpen}
+              >
+                The score is calculated by OrchestratoR's accessibility checks. Claude helps explain what the score means and what to fix next.
+              </div>
+            </div>
+          </div>
           {isClaudeSummaryLoading ? (
             <p className="muted score-interpretation-body">
               Analysing score

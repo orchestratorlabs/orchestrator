@@ -833,6 +833,79 @@ body {
   line-height: 1.5;
 }
 
+.score-interp-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.score-interp-heading h3 {
+  margin: 0;
+}
+
+.score-interp-info-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.score-interp-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid #4a6a9a;
+  background: transparent;
+  color: #8ab0e0;
+  font-size: 9px;
+  font-style: italic;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.score-interp-info-btn:focus-visible {
+  outline: 2px solid #4f8cff;
+  outline-offset: 2px;
+}
+
+.score-interp-info-btn:hover {
+  border-color: #4f8cff;
+  color: #4f8cff;
+}
+
+.score-interp-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: max-content;
+  max-width: 240px;
+  background: #1a2a4a;
+  color: #dfeaff;
+  border: 1px solid #356ee5;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: normal;
+  z-index: 10;
+}
+
+.score-interp-info-wrap:hover .score-interp-tooltip,
+.score-interp-info-wrap:focus-within .score-interp-tooltip,
+.score-interp-info-wrap--open .score-interp-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .score-summary-claude-badge {
   color: #4f8cff;
   font-size: 0.75em;
