@@ -360,9 +360,13 @@ export function OrchestratorPanel({
             </div>
           </div>
           {isClaudeSummaryLoading ? (
-            <p className="muted score-interpretation-body">
-              Analysing score
-              <span className="score-summary-agent-loading"> · · ·</span>
+            <p className="muted score-interpretation-body score-interpretation-body--loading">
+              Analyzing score
+              <span className="a11y-btn-loading-dots" aria-hidden="true">
+                <span className="a11y-btn-dot" />
+                <span className="a11y-btn-dot" />
+                <span className="a11y-btn-dot" />
+              </span>
             </p>
           ) : (
             <p className="muted score-interpretation-body">{claudeSummary}</p>

@@ -589,7 +589,18 @@ export function WorkspacePane({
                 disabled={isDoubleChecking}
                 aria-busy={isDoubleChecking}
               >
-                Run A11Y DoubleCheck
+                {isDoubleChecking ? (
+                  <>
+                    DoubleChecking
+                    <span className="a11y-btn-loading-dots" aria-hidden="true">
+                      <span className="a11y-btn-dot" />
+                      <span className="a11y-btn-dot" />
+                      <span className="a11y-btn-dot" />
+                    </span>
+                  </>
+                ) : (
+                  "Run A11Y DoubleCheck"
+                )}
               </button>
               <span
                 aria-live="polite"
