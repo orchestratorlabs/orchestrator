@@ -842,10 +842,21 @@ def build_a11y_doublecheck_prompt(payload, rag_contents, selected_sources, web_l
     """Build the prompt sent to Claude for A11Y DoubleCheck validation."""
     component_code = (payload.get("componentCode") or "").strip()
     css_code = (payload.get("cssCode") or "").strip()
-    findings = (payload.get("accessibilityFindings") or "").strip()
+    findings_raw = (payload.get("accessibilityFindings") or "").strip()
     recommended_fix = (payload.get("recommendedFix") or "").strip()
     theme_mode = (payload.get("selectedThemeMode") or "Not specified").strip()
+    selected_rule_id = (payload.get("selectedFindingRuleId") or "").strip()
     evaluation_context = payload.get("evaluationContext") or {}
+
+    # Detect all-pass case: every finding in the payload has status "Pass"
+    try:
+        findings_list = json.loads(findings_raw) if findings_raw else []
+        all_pass = bool(findings_list) and all(
+            (f.get("status") or "").lower() == "pass" for f in findings_list
+        )
+    except (json.JSONDecodeError, AttributeError):
+        findings_list = []
+        all_pass = False
 
     sources_list = "\n".join(f"  - {s}" for s in selected_sources)
     web_evidence_lines = []
@@ -863,15 +874,21 @@ def build_a11y_doublecheck_prompt(payload, rag_contents, selected_sources, web_l
 
     eval_json = json.dumps(evaluation_context, indent=2) if evaluation_context else "Not provided."
 
-    return f"""You are the A11Y DoubleCheck Agent for OrchestratoR.
+    current_finding_label = (
+        f"Rule ID: {selected_rule_id}" if selected_rule_id else "No specific rule selected — see findings below."
+    )
 
-CRITICAL OUTPUT RULE: Your entire response must be ONLY the XML block defined in the output format spec below.
-Do NOT include any text before <a11y_doublecheck_result> or after </a11y_doublecheck_result>.
-Do NOT use markdown formatting inside the XML.
-
----
-SCOPE RULE — READ THIS BEFORE ALL OTHER INSTRUCTIONS:
+    if all_pass:
+        scope_rule = """SCOPE RULE — ALL FINDINGS ARE PASSING:
+The static accessibility evaluation returned all findings as Pass for this component and theme mode.
+Your task is to confirm this result is accurate. Review the component code and CSS against the
+criteria present in the findings. If the evidence supports the passing result, return PASS with
+Ship Readiness: Ship Ready. Only return FAIL or PARTIAL if you find a concrete, specific reason
+the static evaluation is wrong — do not invent risks or apply criteria beyond what the findings cover."""
+    else:
+        scope_rule = f"""SCOPE RULE — READ THIS BEFORE ALL OTHER INSTRUCTIONS:
 You are a focused second-pass verifier for the CURRENT finding only.
+Current Finding: {current_finding_label}
 You must NOT validate every WCAG criterion from the registry — only the criteria directly relevant to the current OrchestratoR finding.
 
 Determine the category of the current finding:
@@ -882,7 +899,16 @@ Determine the category of the current finding:
     Do NOT validate contrast criteria.
   - If the finding is about NAME/ROLE/VALUE or ARIA: validate WCAG 4.1.2 only.
     Do NOT validate contrast or keyboard criteria.
-  - If the finding covers multiple specific criteria, validate only those specific criteria.
+  - If the finding covers multiple specific criteria, validate only those specific criteria."""
+
+    return f"""You are the A11Y DoubleCheck Agent for OrchestratoR.
+
+CRITICAL OUTPUT RULE: Your entire response must be ONLY the XML block defined in the output format spec below.
+Do NOT include any text before <a11y_doublecheck_result> or after </a11y_doublecheck_result>.
+Do NOT use markdown formatting inside the XML.
+
+---
+{scope_rule}
 
 VERIFIED ITEMS LIMIT: Include at most 2 items in <verified_items>. Choose the 1–2 most directly
 relevant to the current finding. Do not pad with passing criteria that are not part of the finding.
@@ -912,7 +938,7 @@ INPUTS FOR THIS VALIDATION RUN:
 Theme Mode: {theme_mode}
 
 OrchestratoR Accessibility Finding:
-{findings or "Not provided."}
+{findings_raw or "Not provided."}
 
 Recommended Fix:
 {recommended_fix or "Not provided."}
@@ -956,6 +982,7 @@ def call_claude_a11y_doublecheck(payload, rag_contents, selected_sources, web_lo
     print("=" * 80)
     print(f"  Model         : {get_claude_model()}")
     print(f"  Theme mode    : {payload.get('selectedThemeMode', 'Not specified')}")
+    print(f"  Selected rule : {payload.get('selectedFindingRuleId') or 'None (all findings)'}")
     print(f"  Findings      : {(payload.get('accessibilityFindings') or '')[:120]}")
     print(f"  RAG files     : {list(rag_contents.keys())}")
     print(f"  Sources       : {selected_sources}")

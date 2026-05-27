@@ -188,6 +188,13 @@ export function App() {
 
     const currentCssCode = previewTheme === "dark" ? SAMPLE_BUTTON_CSS_DARK : cssCode;
 
+    const selectedFinding = selectedFindingRuleId
+      ? evaluationResult.findings.find((f) => f.ruleId === selectedFindingRuleId) ?? null
+      : null;
+    const findingsPayload = selectedFinding
+      ? JSON.stringify([selectedFinding])
+      : JSON.stringify(evaluationResult.findings);
+
     setIsDoubleChecking(true);
     setA11yDoubleCheckError(null);
 
@@ -199,7 +206,8 @@ export function App() {
           componentCode: reactCode,
           cssCode: currentCssCode,
           selectedThemeMode: previewTheme,
-          accessibilityFindings: JSON.stringify(evaluationResult.findings),
+          selectedFindingRuleId: selectedFindingRuleId ?? null,
+          accessibilityFindings: findingsPayload,
           recommendedFix: evaluationResult.recommendedFixes.join("; ") || "no_fix",
         }),
       });
