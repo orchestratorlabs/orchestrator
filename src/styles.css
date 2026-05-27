@@ -520,7 +520,7 @@ body {
   border-left: 1px solid var(--border);
   background: var(--surface);
   overflow: auto;
-  padding: 0 14px 14px;
+  padding: 0 14px;
 }
 
 .orchestrator-panel.closed {
@@ -1074,20 +1074,18 @@ body {
 }
 
 .panel-actions {
-  margin-top: 16px;
-  display: flex;
-  overflow-x: auto;
-  overflow-y: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  padding-right: 22px;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: #36465d transparent;
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  padding: 12px 0 14px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
 }
 
 .panel-actions button {
-  flex: 0 0 auto;
-  min-width: 124px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: linear-gradient(180deg, #243247 0%, #202c3f 100%);
@@ -1109,10 +1107,6 @@ body {
 
 .panel-actions button:active {
   transform: translateY(1px);
-}
-
-.panel-actions .primary-action {
-  min-width: 184px;
 }
 
 .preview-theme-toggle {

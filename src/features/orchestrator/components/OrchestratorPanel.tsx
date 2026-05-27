@@ -529,8 +529,11 @@ export function OrchestratorPanel({
         <button type="button" onClick={() => {}}>
           Create JIRA Ticket
         </button>
-        <button type="button" className="primary-action" onClick={() => {}}>
+        <button type="button" onClick={() => {}}>
           Notify Project Manager
+        </button>
+        <button type="button" onClick={() => {}}>
+          Notify DevOps Team
         </button>
       </section>
     </aside>
