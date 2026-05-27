@@ -64,7 +64,9 @@ OUTPUT RULES
        Do not paraphrase in a way that changes the normative meaning. -->
   <evidence_summary></evidence_summary>
 
-  <!-- Each WCAG criterion that was validated and passed -->
+  <!-- Each WCAG criterion that was validated and passed.
+       LIMIT: include at most 2 items. Only the criteria directly relevant to the
+       current OrchestratoR finding. Do not list every passing criterion. -->
   <verified_items>
     <item>
       <criterion>WCAG X.X.X Title</criterion>
@@ -137,13 +139,21 @@ sources_checked:
 
 evidence_summary:
   type: string
+  max_length: 3 sentences
   guidance: >
-    Quote or closely paraphrase the normative W3C language that applies.
+    2–3 sentences maximum. Quote or closely paraphrase the normative W3C language
+    that applies to the current finding only.
     Include specific contrast ratios where relevant.
     Do not invent thresholds or cite non-normative opinions.
+    Do not summarize all sources checked — focus on the current criterion.
 
 verified_items:
   type: list of item elements
+  max_items: 2
+  scope_rule: >
+    Include ONLY criteria directly relevant to the current OrchestratoR finding.
+    Do not include keyboard, accessible name, semantic role, or other criteria
+    unless the current finding is specifically about those areas.
   each_item_fields:
     criterion: WCAG criterion ID and title (e.g. "WCAG 1.4.3 Contrast (Minimum)")
     result: PASS (this list contains only passing items)

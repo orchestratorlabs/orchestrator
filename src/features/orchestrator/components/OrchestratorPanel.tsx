@@ -208,7 +208,7 @@ export function OrchestratorPanel({
             <div className="doublecheck-section">
               <p className="doublecheck-label">Verified</p>
               <ul className="doublecheck-list">
-                {a11yDoubleCheckResult.verifiedItems.map((item) => (
+                {a11yDoubleCheckResult.verifiedItems.slice(0, 2).map((item) => (
                   <li key={item.criterion} className="doublecheck-verified-item">
                     <span className={`doublecheck-verified-result doublecheck-verified-result--${item.result.toLowerCase()}`}>
                       {item.result}
