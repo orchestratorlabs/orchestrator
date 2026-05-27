@@ -73,6 +73,31 @@ export function OrchestratorPanel({
     );
   }, [evaluationResult]);
 
+  const [copiedHex, setCopiedHex] = useState<string | null>(null);
+
+  const renderWithCopyableHex = (text: string) => {
+    const parts = text.split(/(#[0-9a-fA-F]{6})/g);
+    return parts.map((part, i) => {
+      if (!/^#[0-9a-fA-F]{6}$/.test(part)) return part;
+      const isCopied = copiedHex === part + i;
+      return (
+        <button
+          key={i}
+          type="button"
+          className="hex-copy-btn"
+          onClick={() => {
+            navigator.clipboard.writeText(part);
+            setCopiedHex(part + i);
+            setTimeout(() => setCopiedHex(null), 1500);
+          }}
+          title="Click to copy"
+        >
+          {isCopied ? "Copied!" : part}
+        </button>
+      );
+    });
+  };
+
   const [scoreInterpTooltipOpen, setScoreInterpTooltipOpen] = useState(false);
   const [ragQuestion, setRagQuestion] = useState("");
   const [ragAnswer, setRagAnswer] = useState("");
@@ -355,7 +380,7 @@ export function OrchestratorPanel({
                 className="score-interp-tooltip"
                 aria-hidden={!scoreInterpTooltipOpen}
               >
-                The score is calculated by OrchestratoR's accessibility checks. Claude helps explain what the score means and what to fix next.
+                The Score Summary is calculated by OrchestratoR's accessibility checks. Claude helps explain what the score means and what to fix.
               </div>
             </div>
           </div>
@@ -369,7 +394,7 @@ export function OrchestratorPanel({
               </span>
             </p>
           ) : (
-            <p className="muted score-interpretation-body">{claudeSummary}</p>
+            <p className="muted score-interpretation-body">{claudeSummary && renderWithCopyableHex(claudeSummary)}</p>
           )}
         </section>
       )}
@@ -468,7 +493,7 @@ export function OrchestratorPanel({
                 </p>
                 <p className="muted">{finding.evidence}</p>
                 <p className="muted">Severity: {finding.severity}</p>
-                <p className="muted">Recommendation: {finding.recommendation}</p>
+                <p className="muted">Recommendation: {renderWithCopyableHex(finding.recommendation)}</p>
               </li>
             ))}
           </ul>
