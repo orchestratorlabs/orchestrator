@@ -827,6 +827,12 @@ body {
   margin: 10px 0 0;
 }
 
+.score-interpretation-body {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .score-summary-claude-badge {
   color: #4f8cff;
   font-size: 0.75em;

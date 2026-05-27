@@ -329,22 +329,24 @@ export function OrchestratorPanel({
         </div>
         {evaluationResult && (
           <p className="muted score-summary">
-            {claudeSummary && !isClaudeSummaryLoading ? (
-              <>
-                {claudeSummary}
-                <span className="score-summary-claude-badge"> · Agent</span>
-              </>
-            ) : (
-              <>
-                {evaluationResult.summary}
-                {isClaudeSummaryLoading && (
-                  <span className="score-summary-agent-loading"> · · ·</span>
-                )}
-              </>
-            )}
+            {evaluationResult.summary}
           </p>
         )}
       </section>
+
+      {evaluationResult && (isClaudeSummaryLoading || claudeSummary) && (
+        <section className="panel-card">
+          <h3>Accessibility Score Interpretation</h3>
+          {isClaudeSummaryLoading ? (
+            <p className="muted score-interpretation-body">
+              Analysing score
+              <span className="score-summary-agent-loading"> · · ·</span>
+            </p>
+          ) : (
+            <p className="muted score-interpretation-body">{claudeSummary}</p>
+          )}
+        </section>
+      )}
 
       <section className="panel-card ask-orchestrator-card">
         <h3>Ask OrchestratoR</h3>
