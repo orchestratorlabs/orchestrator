@@ -1,0 +1,76 @@
+---
+title: "OrchestratoR™ Digital Twin with AI Agent"
+---
+%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '14px'}}}%%
+flowchart LR
+
+  subgraph IN["① Inputs"]
+    direction TB
+    IN_CODE["React Button<br/>Component Code"]
+    IN_TRIG["A11Y DoubleCheck<br/>Trigger"]
+  end
+
+  subgraph SCH["② Schematic — Orchestrator"]
+    direction TB
+    SCH_ENG["Evaluation Engine"]
+    SCH_CHK["Checks:<br/>• Color contrast<br/>• Target size<br/>• Focus state<br/>• Semantic HTML<br/>• Token mismatch"]
+    SCH_SCAN["Scans:<br/>• WCAG rules<br/>• Design system<br/>• Token usage<br/>• Component structure"]
+    SCH_ENG --> SCH_CHK
+    SCH_ENG --> SCH_SCAN
+  end
+
+  subgraph OUT["③ Outputs"]
+    direction TB
+    OUT_SCORE["Health Score<br/>0–100"]
+    OUT_SUM["Score Summary:<br/>Status · Confidence<br/>Ship Readiness · Findings"]
+    OUT_SCORE --> OUT_SUM
+  end
+
+  subgraph AGT["④ AI Agent — A11Y DoubleCheck"]
+    direction TB
+    AGT_RAG["Load RAG Files<br/>Registry · Examples<br/>Output Format · Template"]
+    AGT_WEB["Controlled Web Lookup<br/>WCAG 2.1 / 2.2 · W3C/WAI"]
+    AGT_BUILD["Build Prompt<br/>+ Evaluation Payload"]
+    AGT_RAG --> AGT_BUILD
+    AGT_WEB --> AGT_BUILD
+  end
+
+  subgraph LLM["⑤ LLM — Claude API"]
+    direction TB
+    LLM_CALL["claude-sonnet-4-6<br/>API Call"]
+    LLM_RAW["Parse Raw<br/>XML Response"]
+    LLM_CALL --> LLM_RAW
+  end
+
+  subgraph AOUT["⑥ AI Agent Output"]
+    direction TB
+    AOUT_ROUTE{"Verdict Decision<br/>Rules-based fallback<br/>if no LLM key"}
+    AOUT_PASS["✅ PASS<br/>Ship Ready<br/>confidence: 97"]
+    AOUT_FAIL["❌ FAIL<br/>Do Not Ship<br/>confidence: 62"]
+    AOUT_PART["⚠️ PARTIAL — Ship With Caution<br/>confidence: 78<br/>Unknown case: ambiguous<br/>or missing evidence"]
+    AOUT_XML["XML Verdict:<br/>• Status · Confidence<br/>• Ship Readiness<br/>• Sources Checked<br/>• Evidence Summary<br/>• Verified Items<br/>• Remaining Risks<br/>• Recommended Next Step"]
+    AOUT_UI["UI Summary Panel"]
+    AOUT_ROUTE -->|"Clear pass signal"| AOUT_PASS
+    AOUT_ROUTE -->|"Fail signal detected"| AOUT_FAIL
+    AOUT_ROUTE -->|"Ambiguous / missing evidence"| AOUT_PART
+    AOUT_PASS --> AOUT_XML
+    AOUT_FAIL --> AOUT_XML
+    AOUT_PART --> AOUT_XML
+    AOUT_XML --> AOUT_UI
+  end
+
+  subgraph HUM["⑦ Human Approved"]
+    direction TB
+    HUM_REV["Review<br/>Reject · Approve"]
+    HUM_LOOP["🔄 Loop<br/>Load New Component"]
+    HUM_REV -->|"7. Ready to ship"| HUM_LOOP
+  end
+
+  IN_CODE -->|"1. Load code"| SCH_ENG
+  SCH_ENG -->|"2. Run evaluation"| OUT_SCORE
+  OUT_SUM -->|"3. Get results"| AGT_BUILD
+  IN_TRIG -->|"4. Run agent"| AGT_RAG
+  AGT_BUILD -->|"5. LLM call"| LLM_CALL
+  LLM_RAW -->|"5b. Parse response"| AOUT_ROUTE
+  AOUT_UI -->|"6. Final output"| HUM_REV
+  HUM_LOOP -->|"8. Load new component"| IN_CODE

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OrchestratoR™ Digital Twin with AI Agent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    background: #f1f5f9;
+    padding: 36px 28px 48px;
+    min-width: 1320px;
+  }
+
+  .title {
+    color: #0f172a;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    color: #64748b;
+    text-align: center;
+    font-size: 12px;
+    margin-bottom: 32px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Diagram shell ── */
+  .diagram {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-height: 580px;
+  }
+
+  /* ── Swim lanes — all unified ── */
+  .lane {
+    flex: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+    background: #ffffff;
+    border: 1.5px solid #d4c87a;
+  }
+
+  .lane-header {
+    padding: 11px 10px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #ffffff;
+    background: #1e293b;
+  }
+
+  .lane-body {
+    flex: 1;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  /* ── Nodes — all warm yellow ── */
+  .node {
+    background: #fef9c3;
+    border: 1.5px solid #fde047;
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 11px;
+    line-height: 1.55;
+    color: #1e293b;
+  }
+
+  .node-title {
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: 3px;
+    color: #1e293b;
+  }
+
+  .node ul {
+    padding-left: 13px;
+    margin-top: 3px;
+  }
+
+  .node ul li {
+    font-size: 10px;
+    color: #475569;
+    line-height: 1.7;
+  }
+
+  /* Verdict badges — subtle differentiation within warm palette */
+  .verdict {
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 10.5px;
+    line-height: 1.5;
+    background: #fef9c3;
+    border: 1.5px solid #fde047;
+    color: #1e293b;
+  }
+
+  .verdict strong { font-size: 11px; }
+
+  .verdict-pass    { border-left: 4px solid #1e293b; }
+  .verdict-fail    { border-left: 4px solid #1e293b; opacity: 0.75; }
+  .verdict-partial { border-left: 4px solid #1e293b; border-style: dashed; border-left-style: solid; }
+
+  .verdict-partial .unknown-label {
+    display: block;
+    font-size: 9.5px;
+    margin-top: 3px;
+    color: #64748b;
+    font-style: italic;
+  }
+
+  /* Decision diamond */
+  .diamond-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0;
+  }
+
+  .diamond {
+    width: 68px;
+    height: 68px;
+    background: #fef9c3;
+    border: 2px solid #1e293b;
+    transform: rotate(45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .diamond-text {
+    transform: rotate(-45deg);
+    font-size: 9px;
+    font-weight: 700;
+    color: #1e293b;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .diamond-label {
+    font-size: 9px;
+    color: #94a3b8;
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* ── Connectors — all unified dark ── */
+  .connector {
+    width: 54px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 38px;
+    gap: 4px;
+    position: relative;
+  }
+
+  .step-badge {
+    background: #1e293b;
+    color: #fef9c3;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .arrow {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .arrow-shaft {
+    flex: 1;
+    height: 2px;
+    background: #1e293b;
+  }
+
+  .arrow-head {
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 8px solid #1e293b;
+  }
+
+  .connector-note {
+    font-size: 8.5px;
+    color: #64748b;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.4;
+    margin-top: 6px;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    color: #94a3b8;
+    text-align: center;
+    font-size: 11px;
+    margin-top: 24px;
+  }
+</style>
+</head>
+<body>
+
+<div class="title">OrchestratoR™ — Digital Twin with AI Agent</div>
+<div class="subtitle">Craig Maher ©2026 &nbsp;·&nbsp; 7 Swim Lanes &nbsp;·&nbsp; Inputs → Schematic → Outputs → AI Agent → LLM → AI Agent Output → Human Approved</div>
+
+<div class="diagram">
+
+  <!-- ① INPUTS -->
+  <div class="lane lane-inputs">
+    <div class="lane-header">① Inputs</div>
+    <div class="lane-body">
+      <div class="node node">
+        <div class="node-title">React Button</div>
+        Component Code
+      </div>
+      <div class="node node" style="margin-top: auto;">
+        <div class="node-title">A11Y DoubleCheck</div>
+        User Trigger
+      </div>
+    </div>
+  </div>
+
+  <!-- → -->
+  <div class="connector">
+    <div class="step-badge">1. Load code</div>
+    <div class="arrow"><div class="arrow-shaft"></div><div class="arrow-head"></div></div>
+  </div>
+
+  <!-- ② SCHEMATIC -->
+  <div class="lane lane-schematic">
+    <div class="lane-header">② Schematic</div>
+    <div class="lane-body">
+      <div class="node node">
+        <div class="node-title">Orchestrator</div>
+        Evaluation Engine
+      </div>
+      <div class="node node">
+        <div class="node-title">Checks</div>
+        <ul>
+          <li>Color contrast</li>
+          <li>Target size</li>
+          <li>Focus state</li>
+          <li>Semantic HTML</li>
+          <li>Token mismatch</li>
+        </ul>
+      </div>
+      <div class="node node">
+        <div class="node-title">Scans</div>
+        <ul>
+          <li>WCAG rules</li>
+          <li>Design system</li>
+          <li>Token usage</li>
+          <li>Component structure</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- → -->
+  <div class="connector">
+    <div class="step-badge">2. Run eval</div>
+    <div class="arrow"><div class="arrow-shaft"></div><div class="arrow-head"></div></div>
+  </div>
+
+  <!-- ③ OUTPUTS -->
+  <div class="lane lane-outputs">
+    <div class="lane-header">③ Outputs</div>
+    <div class="lane-body">
+      <div class="node node">
+        <div class="node-title">Health Score</div>
+        0 – 100
+      </div>
+      <div class="node node">
+        <div class="node-title">Score Summary</div>
+        <ul>
+          <li>Status</li>
+          <li>Confidence</li>
+          <li>Ship Readiness</li>
+          <li>Findings</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- → -->
+  <div class="connector">
+    <div class="step-badge">3. Get results</div>
+    <div class="arrow"><div class="arrow-shaft"></div><div class="arrow-head"></div></div>
+    <div class="connector-note">4. Run agent ↑<br/>User trigger</div>
+  </div>
+
+  <!-- ④ AI AGENT -->
+  <div class="lane lane-agent">
+    <div class="lane-header">④ AI Agent — A11Y DoubleCheck</div>
+    <div class="lane-body">
+      <div class="node node">
+        <div class="node-title">Load RAG Files</div>
+        <ul>
+          <li>Registry</li>
+          <li>Examples</li>
+          <li>Output Format</li>
+          <li>Response Template</li>
+        </ul>
+      </div>
+      <div class="node node">
+        <div class="node-title">Controlled Web Lookup</div>
+        <ul>
+          <li>WCAG 2.1 / 2.2</li>
+          <li>W3C / WAI guidance</li>
+        </ul>
+      </div>
+      <div class="node node">
+        <div class="node-title">Build Prompt</div>
+        + Evaluation Payload
+      </div>
+    </div>
+  </div>
+
+  <!-- → -->
+  <div class="connector">
+    <div class="step-badge">5. LLM call</div>
+    <div class="arrow"><div class="arrow-shaft"></div><div class="arrow-head"></div></div>
+  </div>
+
+  <!-- ⑤ LLM -->
+  <div class="lane lane-llm">
+    <div class="lane-header">⑤ LLM — Claude API</div>
+    <div class="lane-body">
+      <div class="node node">
+        <div class="node-title">claude-sonnet-4-6</div>
+        API Call
+      </div>
+      <div class="node node">
+        <div class="node-title">Parse Raw</div>
+        XML Response
+      </div>
+    </div>
+  </div>
+
+  <!-- → -->
+  <div class="connector">
+    <div class="step-badge">5b. Verdict</div>
+    <div class="arrow"><div class="arrow-shaft"></div><div class="arrow-head"></div></div>
+  </div>
+
+  <!-- ⑥ AI AGENT OUTPUT -->
+  <div class="lane lane-aout">
+    <div class="lane-header">⑥ AI Agent Output</div>
+    <div class="lane-body">
+
+      <div class="diamond-wrap">
+        <div class="diamond">
+          <div class="diamond-text">Verdict<br/>Route</div>
+        </div>
+        <div class="diamond-label">Rules fallback if<br/>no LLM key</div>
+      </div>
+
+      <div class="verdict verdict-pass">
+        ✅ <strong>PASS — Ship Ready</strong><br/>
+        confidence: 97
+      </div>
+      <div class="verdict verdict-fail">
+        ❌ <strong>FAIL — Do Not Ship</strong><br/>
+        confidence: 62
+      </div>
+      <div class="verdict verdict-partial">
+        ⚠️ <strong>PARTIAL — Ship With Caution</strong><br/>
+        confidence: 78
+        <span class="unknown-label">Unknown case: ambiguous<br/>or missing evidence</span>
+      </div>
+
+      <div class="node node">
+        <div class="node-title">XML Verdict</div>
+        <ul>
+          <li>Status · Confidence</li>
+          <li>Ship Readiness</li>
+          <li>Sources Checked</li>
+          <li>Evidence Summary</li>
+          <li>Verified Items</li>
+          <li>Remaining Risks</li>
+          <li>Recommended Next Step</li>
+        </ul>
+      </div>
+
+      <div class="node node">
+        <div class="node-title">UI Summary Panel</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- → -->
+  <div class="connector">
+    <div class="step-badge">6. Final output</div>
+    <div class="arrow"><div class="arrow-shaft"></div><div class="arrow-head"></div></div>
+  </div>
+
+  <!-- ⑦ HUMAN APPROVED -->
+  <div class="lane lane-human">
+    <div class="lane-header">⑦ Human Approved</div>
+    <div class="lane-body">
+      <div class="node node">
+        <div class="node-title">Review</div>
+        Reject · Approve
+      </div>
+      <div class="node node" style="text-align: center; margin-top: auto;">
+        <div class="node-title">🔄 Loop</div>
+        Load New Component
+        <div style="font-size: 9px; color: #64748b; margin-top: 4px;">8. Start over ↩</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">OrchestratoR™ · Craig Maher ©2026 · Digital Twin with AI Agent</div>
+
+</body>
+</html>
