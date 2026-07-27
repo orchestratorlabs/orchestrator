@@ -147,3 +147,6 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+
+# Local design-source exports (not published)
+docs/visual-reference/figma-exports/
