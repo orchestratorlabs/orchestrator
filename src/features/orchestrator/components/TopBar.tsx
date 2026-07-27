@@ -8,7 +8,7 @@ export function TopBar() {
         aria-label="Search"
       />
       <div className="top-actions">
-        <button type="button" className="icon-btn" aria-label="Profile">
+        <button type="button" className="top-bar-btn" aria-label="Profile">
           Admin
         </button>
       </div>

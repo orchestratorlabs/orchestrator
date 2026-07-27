@@ -1,28 +1,47 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { EvaluationResult, RuleResult } from "../orchestrator/types/evaluation";
+import {
+  FALLBACK_SELECTOR,
+  TARGET_DISABLED_MODIFIER,
+  TARGET_SELECTOR,
+  cssBlockPattern,
+  cssSelectorOpenPattern
+} from "../orchestrator/evaluator/targetSelector";
 import { LiveButtonPreview, type ButtonPreviewState } from "./LiveButtonPreview";
 
-const SAMPLE_TSX = `import React from "react";
-import "./MixedIconButton.css";
+/**
+ * CSS-editor highlight patterns, derived from the shared selector contract so
+ * they cannot drift from the rules in `buttonEvaluator`.
+ */
+const TARGET_BLOCK = cssBlockPattern(TARGET_SELECTOR);
+const TARGET_OPEN = cssSelectorOpenPattern(TARGET_SELECTOR);
+const TARGET_FOCUS_BLOCK = cssBlockPattern(`${TARGET_SELECTOR}:focus-visible`);
+const TARGET_DISABLED_BLOCK = cssBlockPattern(`${TARGET_SELECTOR}:disabled`);
+const TARGET_DISABLED_MODIFIER_BLOCK = cssBlockPattern(TARGET_DISABLED_MODIFIER);
+const FALLBACK_BLOCK = cssBlockPattern(FALLBACK_SELECTOR);
+const FALLBACK_FOCUS_BLOCK = cssBlockPattern(`${FALLBACK_SELECTOR}:focus-visible`);
+const FALLBACK_DISABLED_BLOCK = cssBlockPattern(`${FALLBACK_SELECTOR}:disabled`);
 
-type IconButtonProps = {
+const SAMPLE_TSX = `import React from "react";
+import "./Button.css";
+
+type ButtonProps = {
   onClick?: () => void;
   disabled?: boolean;
 };
 
-export function MixedIconButton({
+export function Button({
   onClick,
   disabled = false,
-}: IconButtonProps) {
+}: ButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="icon-btn"
+      className="btn"
       disabled={disabled}
     >
-      <span aria-hidden="true" className="icon-btn__icon">✕</span>
-      <span className="icon-btn__label">Close</span>
+      <span className="btn__label">Button large</span>
     </button>
   );
 }`;
@@ -40,7 +59,7 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
   --Text-Disabled: #8C8C8C;
 }
 
-.icon-btn {
+.btn {
   min-width: 44px;
   min-height: 44px;
   padding: 10px 14px;
@@ -51,36 +70,30 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   font-family: "Atkinson Hyperlegible Next", Arial, sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 1.2;
 }
 
-.icon-btn:focus-visible {
+.btn:focus-visible {
   outline: 3px solid var(--Focus-Ring, #011D53);
   outline-offset: 2px;
 }
 
-.icon-btn:hover {
+.btn:hover {
   background: var(--Bg-Brand-Hover, #022D7F);
 }
 
-.icon-btn:active {
+.btn:active {
   background: var(--Bg-Brand-Active, #011D53);
 }
 
-.icon-btn:disabled {
+.btn:disabled {
   background: var(--Bg-Disabled, #BDBDBD);
   color: var(--Text-Disabled, #8C8C8C);
   cursor: not-allowed;
   opacity: 1;
-}
-
-.icon-btn__icon {
-  font-size: 16px;
-  line-height: 1;
 }`;
 
 const SAMPLE_CSS_DARK = `@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&display=swap");
@@ -96,7 +109,7 @@ const SAMPLE_CSS_DARK = `@import url("https://fonts.googleapis.com/css2?family=A
   --Text-Disabled: #595959;
 }
 
-.icon-btn {
+.btn {
   min-width: 44px;
   min-height: 44px;
   padding: 10px 14px;
@@ -107,36 +120,30 @@ const SAMPLE_CSS_DARK = `@import url("https://fonts.googleapis.com/css2?family=A
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   font-family: "Atkinson Hyperlegible Next", Arial, sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 1.2;
 }
 
-.icon-btn:focus-visible {
+.btn:focus-visible {
   outline: 3px solid var(--Focus-Ring, #367BF9);
   outline-offset: 2px;
 }
 
-.icon-btn:hover {
+.btn:hover {
   background: var(--Bg-Brand-Hover, #5E97FF);
 }
 
-.icon-btn:active {
+.btn:active {
   background: var(--Bg-Brand-Active, #367BF9);
 }
 
-.icon-btn:disabled {
+.btn:disabled {
   background: var(--Bg-Disabled, #D5D5D5);
   color: var(--Text-Disabled, #595959);
   cursor: not-allowed;
   opacity: 1;
-}
-
-.icon-btn__icon {
-  font-size: 16px;
-  line-height: 1;
 }`;
 
 interface WorkspacePaneProps {
@@ -249,7 +256,7 @@ function mapFindingToAnnotation(finding: RuleResult, reactCode: string, cssCode:
   );
   const fallbackCssRange = firstRangeFromPatterns(
     cssCode,
-    [/\.icon-btn\s*\{[\s\S]*?\}/m, /button\s*\{[\s\S]*?\}/m, /:root\s*\{[\s\S]*?\}/m],
+    [TARGET_BLOCK, FALLBACK_BLOCK, /:root\s*\{[\s\S]*?\}/m],
     { startLine: 1, endLine: 1 }
   );
   const status = finding.status as AnnotationStatus;
@@ -260,16 +267,16 @@ function mapFindingToAnnotation(finding: RuleResult, reactCode: string, cssCode:
   );
   const cssBaseBlockRange = firstRangeFromPatterns(
     cssCode,
-    [/\.icon-btn\s*\{[\s\S]*?\}/m, /button\s*\{[\s\S]*?\}/m],
+    [TARGET_BLOCK, FALLBACK_BLOCK],
     fallbackCssRange
   );
   const focusVisibleRange =
-    findCssSelectorBlockRange(cssCode, /\.icon-btn:focus-visible\s*\{[\s\S]*?\}/m) ??
-    findCssSelectorBlockRange(cssCode, /button:focus-visible\s*\{[\s\S]*?\}/m);
+    findCssSelectorBlockRange(cssCode, TARGET_FOCUS_BLOCK) ??
+    findCssSelectorBlockRange(cssCode, FALLBACK_FOCUS_BLOCK);
   const disabledRange =
-  findCssSelectorBlockRange(cssCode, /\.icon-btn:disabled\s*\{[\s\S]*?\}/m) ??
-  findCssSelectorBlockRange(cssCode, /\.icon-btn\.icon-btn--disabled\s*\{[\s\S]*?\}/m) ??
-  findCssSelectorBlockRange(cssCode, /button:disabled\s*\{[\s\S]*?\}/m);
+  findCssSelectorBlockRange(cssCode, TARGET_DISABLED_BLOCK) ??
+  findCssSelectorBlockRange(cssCode, TARGET_DISABLED_MODIFIER_BLOCK) ??
+  findCssSelectorBlockRange(cssCode, FALLBACK_DISABLED_BLOCK);
 
   switch (finding.ruleId) {
     case "rule-1-semantic-button":
@@ -344,7 +351,7 @@ case "rule-5-text-contrast": {
       cssCode,
       isDisabledTextContrast
         ? [/color\s*:\s*var\(--Text-Disabled/, /color\s*:/]
-        : [/color\s*:/, /background(?:-color)?\s*:/, /\.icon-btn\s*\{/],
+        : [/color\s*:/, /background(?:-color)?\s*:/, TARGET_OPEN],
       midpointLine(targetRange)
     ),
     label: finding.ruleName,
@@ -357,12 +364,12 @@ case "rule-5-text-contrast": {
         id: finding.ruleId,
         ...firstSingleLineRangeFromPatterns(
           cssCode,
-          [/min-width\s*:/, /min-height\s*:/, /\.icon-btn\s*\{/],
+          [/min-width\s*:/, /min-height\s*:/, TARGET_OPEN],
           cssBaseBlockRange.startLine
         ),
         focusLine: firstMatchingLineFromPatterns(
           cssCode,
-          [/min-width\s*:/, /min-height\s*:/, /\.icon-btn\s*\{/],
+          [/min-width\s*:/, /min-height\s*:/, TARGET_OPEN],
           cssBaseBlockRange.startLine
         ),
         label: finding.ruleName,
@@ -375,7 +382,7 @@ case "rule-5-text-contrast": {
         ...(disabledRange ??
           firstSingleLineRangeFromPatterns(
             cssCode,
-            [/:disabled/, /disabled/, /\.icon-btn\s*\{/],
+            [/:disabled/, /disabled/, TARGET_OPEN],
             cssBaseBlockRange.startLine
           )),
         focusLine: firstMatchingLineFromPatterns(
@@ -392,12 +399,12 @@ case "rule-5-text-contrast": {
         id: finding.ruleId,
         ...firstRangeFromPatterns(
           cssCode,
-          [/\.icon-btn\s*\{[\s\S]*?\}/m, /button\s*\{[\s\S]*?\}/m],
+          [TARGET_BLOCK, FALLBACK_BLOCK],
           cssBaseBlockRange
         ),
         focusLine: firstMatchingLineFromPatterns(
           cssCode,
-          [/:hover/, /:focus-visible/, /:active/, /:disabled/, /\.icon-btn\s*\{/],
+          [/:hover/, /:focus-visible/, /:active/, /:disabled/, TARGET_OPEN],
           midpointLine(cssBaseBlockRange)
         ),
         label: finding.ruleName,

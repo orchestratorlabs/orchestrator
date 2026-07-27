@@ -1,5 +1,11 @@
 import { MVP_SCORING_POLICY, type EvaluationResult, type RuleResult } from "../types/evaluation";
 import { orderFindingsForMvp } from "../types/rules";
+import {
+  FALLBACK_SELECTOR,
+  TARGET_DISABLED_MODIFIER,
+  TARGET_SELECTOR,
+  escapeForRegExp
+} from "./targetSelector";
 
 type Severity = RuleResult["severity"];
 
@@ -141,8 +147,7 @@ function contrastRatio(foregroundHex: string, backgroundHex: string): number {
 }
 
 function findCssBlock(cssCode: string, selector: string): string | null {
-  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, "m");
+  const pattern = new RegExp(`${escapeForRegExp(selector)}\\s*\\{([\\s\\S]*?)\\}`, "m");
   const match = cssCode.match(pattern);
   return match ? match[1] : null;
 }
@@ -284,7 +289,9 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
   }
 
   // Rule 4: focus visibility
-  const focusBlock = findCssBlock(cssCode, ".icon-btn:focus-visible") ?? findCssBlock(cssCode, "button:focus-visible");
+  const focusBlock =
+    findCssBlock(cssCode, `${TARGET_SELECTOR}:focus-visible`) ??
+    findCssBlock(cssCode, `${FALLBACK_SELECTOR}:focus-visible`);
   if (!focusBlock) {
     findings.push(
       createUnknown(
@@ -319,11 +326,11 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
   }
 
    // Rule 5: text contrast
-  const baseBlock = findCssBlock(cssCode, ".icon-btn") ?? findCssBlock(cssCode, "button");
+  const baseBlock = findCssBlock(cssCode, TARGET_SELECTOR) ?? findCssBlock(cssCode, FALLBACK_SELECTOR);
   const disabledBlock =
-    findCssBlock(cssCode, ".icon-btn:disabled") ??
-    findCssBlock(cssCode, ".icon-btn.icon-btn--disabled") ??
-    findCssBlock(cssCode, "button:disabled");
+    findCssBlock(cssCode, `${TARGET_SELECTOR}:disabled`) ??
+    findCssBlock(cssCode, TARGET_DISABLED_MODIFIER) ??
+    findCssBlock(cssCode, `${FALLBACK_SELECTOR}:disabled`);
 
   if (!baseBlock) {
     findings.push(
@@ -484,7 +491,9 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
 
   // Rule 8: disabled state behavior
   const hasDisabledAttribute = /disabled\s*=/.test(buttonMarkup);
-  const hasDisabledCss = Boolean(findCssBlock(cssCode, ".icon-btn:disabled") || findCssBlock(cssCode, "button:disabled"));
+  const hasDisabledCss = Boolean(
+    findCssBlock(cssCode, `${TARGET_SELECTOR}:disabled`) || findCssBlock(cssCode, `${FALLBACK_SELECTOR}:disabled`)
+  );
   if (hasDisabledAttribute && hasDisabledCss) {
     findings.push(
       createPass(
@@ -512,9 +521,13 @@ export function evaluateButtonAccessibility(reactCode: string, cssCode: string):
 
   // Rule 9: state coverage
   const hasBase = Boolean(baseBlock);
-  const hasHover = Boolean(findCssBlock(cssCode, ".icon-btn:hover") || findCssBlock(cssCode, "button:hover"));
+  const hasHover = Boolean(
+    findCssBlock(cssCode, `${TARGET_SELECTOR}:hover`) || findCssBlock(cssCode, `${FALLBACK_SELECTOR}:hover`)
+  );
   const hasFocus = Boolean(focusBlock);
-  const hasActive = Boolean(findCssBlock(cssCode, ".icon-btn:active") || findCssBlock(cssCode, "button:active"));
+  const hasActive = Boolean(
+    findCssBlock(cssCode, `${TARGET_SELECTOR}:active`) || findCssBlock(cssCode, `${FALLBACK_SELECTOR}:active`)
+  );
   const hasDisabled = hasDisabledCss;
   if (hasBase && hasHover && hasFocus && hasActive && hasDisabled) {
     findings.push(

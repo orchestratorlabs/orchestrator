@@ -36,7 +36,7 @@ const PREVIEW_SHELL_CSS = `
   align-items: center;
   background: #E6E6E6;
 }
-.icon-btn {
+.btn {
   min-width: 44px;
   min-height: 44px;
   padding: 10px 20px;
@@ -53,10 +53,7 @@ const PREVIEW_SHELL_CSS = `
   font-weight: 500;
   line-height: 1.2;
 }
-.icon-btn__icon {
-  display: none;
-}
-.icon-btn__label {
+.btn__label {
   display: inline;
   font-family: inherit;
   font-size: inherit;
@@ -95,28 +92,28 @@ function buildPreviewStateCss(cssCode: string): string {
     extractCssTokenValue(cssCode, "--Text-Disabled", "#494949");
 
   return `
-.icon-btn.icon-btn--default {
+.btn.btn--default {
   background: #0540AB;
   color: #FFFFFF;
   outline: none;
   cursor: pointer;
 }
 
-.icon-btn.icon-btn--hover {
+.btn.btn--hover {
   background: #022D7F;
   color: #FFFFFF;
   outline: none;
   cursor: pointer;
 }
 
-.icon-btn.icon-btn--active {
+.btn.btn--active {
   background: #011D53;
   color: #FFFFFF;
   outline: none;
   cursor: pointer;
 }
 
-.icon-btn.icon-btn--disabled {
+.btn.btn--disabled {
   background: ${disabledBackground};
   color: ${disabledText};
   cursor: not-allowed;
@@ -124,7 +121,7 @@ function buildPreviewStateCss(cssCode: string): string {
   outline: none;
 }
 
-.icon-btn.icon-btn--focused {
+.btn.btn--focused {
   background: #0540AB;
   color: #FFFFFF;
   outline: 3px solid #011D53;
@@ -167,11 +164,11 @@ function PreviewContent({
     <div className="preview-canvas">
       <button
         type="button"
-        className={`icon-btn icon-btn--${selectedState}`}
+        className={`btn btn--${selectedState}`}
         disabled={selectedState === "disabled"}
         onClick={() => {}}
       >
-        <span className="icon-btn__label">Button large</span>
+        <span className="btn__label">Button large</span>
       </button>
     </div>
   );
@@ -195,27 +192,27 @@ function buildThemeCss(theme: "light" | "dark"): string {
 
   return `${base}
 
-.preview-canvas .icon-btn.icon-btn--default {
+.preview-canvas .btn.btn--default {
   background: #8DB6FF;
   color: #1A1A1A;
 }
 
-.preview-canvas .icon-btn.icon-btn--hover {
+.preview-canvas .btn.btn--hover {
   background: #5E97FF;
   color: #1A1A1A;
 }
 
-.preview-canvas .icon-btn.icon-btn--active {
+.preview-canvas .btn.btn--active {
   background: #367BF9;
   color: #1A1A1A;
 }
 
-.preview-canvas .icon-btn.icon-btn--disabled {
+.preview-canvas .btn.btn--disabled {
   background: #D5D5D5;
   color: #595959;
 }
 
-.preview-canvas .icon-btn.icon-btn--focused {
+.preview-canvas .btn.btn--focused {
   background: #8DB6FF;
   color: #1A1A1A;
   outline: 3px solid #367BF9;
@@ -224,7 +221,7 @@ function buildThemeCss(theme: "light" | "dark"): string {
 }
 
 /**
- * Renders the MVP button preview in an open shadow root so edited `.icon-btn` / token CSS
+ * Renders the MVP button preview in an open shadow root so edited `.btn` / token CSS
  * does not collide with the host app, while keeping a real native button in normal tab order.
  *
  * Shadow DOM order: shell → user CSS → state overrides → theme → React mount.
