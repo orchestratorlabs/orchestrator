@@ -140,3 +140,10 @@ vite.config.ts.timestamp-*
 .DS_Store
 .claude/skills/
 skills-lock.json
+
+# Python (app.py / rag backend)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
