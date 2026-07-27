@@ -375,7 +375,10 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
   font-size: 13px;
-  line-height: 1.5;
+  /* Must stay an exact integer matching TEXTAREA_LINE_HEIGHT in WorkspacePane.tsx.
+     A fractional value (e.g. 1.5 → 19.5px) drifts the annotation overlay ~0.5px
+     per line, putting highlights a full line off by ~line 44. */
+  line-height: 20px;
   padding: 12px;
   resize: vertical;
 }
