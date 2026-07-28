@@ -141,6 +141,12 @@ vite.config.ts.timestamp-*
 .claude/skills/
 skills-lock.json
 
+# Raw research data — participant identifiers and verbatim quotes.
+# Never commit to this repo; it is public and pushed history is permanent.
+# Only the README explaining the folder is tracked.
+docs/design/sessions/*
+!docs/design/sessions/README.md
+
 # Python (app.py / rag backend)
 __pycache__/
 *.py[cod]

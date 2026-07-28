@@ -8,6 +8,44 @@ Diagrams are Mermaid and render natively in VSCode with the
 [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid)
 extension.
 
+## Convention — append only
+
+**This log is append-only. Never overwrite or replace a previous session.**
+
+Each `/layers-*` run adds a new dated `## Session N` section at the end. Earlier
+sessions stay exactly as written, including decisions later reversed and claims
+later corrected — the record of how thinking changed is itself the value. When a
+later session contradicts an earlier one, add a *Corrections* subsection to the
+new session (see Session 2) rather than editing the old one. When a decision is
+un-made, mark it `HELD` in place (see D1) rather than deleting it.
+
+## Documents in this folder
+
+| File | Purpose | PDF export |
+|---|---|---|
+| `layers-session.md` | This log. Design rationale and decisions, all sessions. | — (too long to work from live) |
+| [moderator-engineers.md](moderator-engineers.md) | Protocol A — live script, engineer sessions | `moderator-engineers.pdf` |
+| [moderator-experts.md](moderator-experts.md) | Protocol B — live script, expert sessions | `moderator-experts.pdf` |
+| [capture-sheet.md](capture-sheet.md) | One copy per participant, filled in live | `capture-sheet.pdf` |
+
+**The markdown is the source of truth. The PDFs are exports.**
+
+PDFs of the three operational docs are kept in this folder so the scripts and
+capture sheet can be printed, or lifted out of the project and used standalone
+during sessions without needing the repo open.
+
+Consequence: they go stale silently. If a protocol changes, edit the markdown
+and re-export — never edit a PDF, and never treat one as authoritative when it
+disagrees with its `.md`. Exports are from 2026-07-28.
+
+## Sessions so far
+
+| # | Skill | Layer | Outcome |
+|---|---|---|---|
+| 1 | `/layers-orient` | all seven | Bottleneck identified: conceptual model |
+| 2 | `/layers-conceptual-model` | conceptual model | 8 decisions (D1 held), object model, ubiquitous language |
+| 3 | `/layers-observed-behaviour` | observed behaviour | Study plan, 2 protocols, 4 research questions |
+
 ---
 
 ## Session 1 — `/layers-orient` (2026-07-28)
@@ -385,3 +423,252 @@ the object boundaries are the parts most likely to be wrong.
 `/layers-interaction-flow` — design how users move through these objects,
 including the temporal states the audit rated thin (empty, loading, partial,
 failure paths).
+
+---
+
+## Session 3 — `/layers-observed-behaviour` (2026-07-28) — Plan mode
+
+Study design for the first research OrchestratoR has had. Session 1 rated this
+layer Not started; this plan closes that gap and, deliberately, tests three
+decisions left unratified in Session 2.
+
+**Format:** moderated, live, screen share, think-aloud. 30 minutes.
+**Segments:** accessibility experts + engineers ("to start with" — wave 1).
+
+### Research questions
+
+| # | Question | Segment | Method |
+|---|---|---|---|
+| RQ1 | When a developer hits an accessibility problem in a component today, what triggers them to act, what do they reach for, and where does it stall? | Engineers | JTBD retrospective (compressed — see caveat) |
+| RQ2 | Can someone unfamiliar with OrchestratoR load a component, run an evaluation, and reach a ship / don't-ship decision unaided — and where do they hesitate? | Both | Usability observation, think-aloud |
+| RQ3 | What do people believe the health score, `Unknown`, and the DoubleCheck verdict *mean* — and does that match what the model intends? | **Engineers (primary)** | Comprehension probes |
+| RQ4 | Are the nine rules and their verdicts defensible to someone who does accessibility professionally? | **Experts only** | Expert review probes |
+
+**RQ1 caveat.** At 30 minutes RQ1 gets ~6 minutes: one grounded story, not
+saturation. Findings on it are directional and must be marked `inferred`, never
+`observed`. A real answer to RQ1 needs its own study.
+
+### Why the segments are not pooled
+
+Accessibility experts already know what `Unknown` means and what WCAG 1.4.3
+requires. Their comprehension answers are therefore **not evidence** about
+target-user comprehension — using them that way would manufacture a false pass
+on RQ3. What experts uniquely provide is judgement on whether the findings are
+*correct* (RQ4), which engineers cannot give.
+
+- **Engineers** → RQ1, RQ2, RQ3. The target user per D7.
+- **Experts** → RQ2, RQ4. Content validity and credibility.
+
+Tag every observation with the segment it came from. Do not aggregate RQ3 across
+both.
+
+### Sample
+
+Wave 1: **4 engineers + 3 accessibility experts = 7 sessions.**
+
+Engineers should build UI components as part of their actual job and should
+*not* be accessibility specialists — the comprehension data depends on them
+being representative of the target user. Recruit for range in prior WCAG
+exposure rather than screening it out; "has heard of contrast ratios but
+couldn't quote a threshold" is the modal target user.
+
+Below 4 engineers, RQ3 stays directional. That is an acceptable wave-1 outcome
+if recruitment is hard — state it rather than over-claiming.
+
+### Two separate protocols
+
+The segments are interviewed separately, so each gets a purpose-built 30
+minutes rather than one script with skipped blocks. The expert session spends
+the time engineers give to RQ1 on content validity instead.
+
+Shared opening for both (**0–3 min · Setup**): consent to record. Frame
+honestly — *"This is a proof of concept I built. I'm testing it, not you — if
+something is confusing, that's the finding I need."* Establish think-aloud.
+State that it evaluates buttons only.
+
+---
+
+## Protocol A — Engineer session (30 min)
+
+Covers RQ1, RQ2, RQ3. This is the comprehension and friction signal.
+
+**3–9 min · RQ1 — retrospective**
+
+Ground in a real past event, never a hypothetical:
+
+> "Tell me about the last time you shipped, or nearly shipped, a component with
+> an accessibility problem. Walk me through what was happening."
+
+Follow the story, don't lead it:
+- "What made you notice?"
+- "What did you reach for first?"
+- "What did you do when that didn't settle it?"
+- "Who else got involved, and when?"
+
+Listen for **nouns** (candidate domain objects) and **workarounds** — a need
+real enough to motivate improvisation is the strongest signal available.
+
+**9–21 min · RQ2 — task, unaided**
+
+Task given: *"Find out whether this button is accessible enough to ship."*
+Nothing more. Do not mention the panel.
+
+Do not help for the first 90 seconds of any stall. Silence is data.
+
+Capture:
+
+| Observation | Why it matters |
+|---|---|
+| Did they find the panel trigger unaided, and how long did it take? | The panel is closed by default and opens from an icon in the top right ([wireframe spec:61-65](../orchestrator_wireframe_spec.md#L61-L65)). If discovery fails, everything above it is unreachable. |
+| Time to first completed evaluation | Baseline task-completion signal |
+| Did they switch theme unprompted? | Gates the D3 probe below |
+| Did they run DoubleCheck without being told it existed? | Tests whether the second pass is discoverable or decorative |
+| Did they reach a ship / don't-ship decision, and on what basis? | The actual job. A participant who never reaches a verdict is the most important finding in the study. |
+| Every point of hesitation, with what was on screen | RQ2's primary output |
+
+**21–28 min · RQ3 / RQ4 — comprehension probes**
+
+Ask in this order. Never explain before they answer.
+
+*Score meaning (tests D4):*
+1. Point at the score. "What does this number tell you?"
+2. "What would make it go up?"
+
+*Score subject (tests D3):* if they didn't switch theme unprompted, do it for
+them now.
+3. "Same button. Light mode says 85, dark says 100. What do you make of that?"
+4. "So what's this component's score?"
+
+*Evidence gaps (tests D4):* switch to the prepared no-CSS fixture, which
+returns a high score with most rules unverified.
+5. "What does `Unknown` mean here?"
+6. "Is `Unknown` better or worse than `Fail`?"
+7. **"Would you ship this?"** — if yes, the bare number is actively
+   misleading and D4 is load-bearing rather than pedantic.
+
+*Verdict subject (settles D1):*
+8. Point at the DoubleCheck verdict. "This says PASS. What is it saying passed?"
+
+> D1 was held in Session 2 because the rename assumed the verdict reports on
+> whether the *Evaluation* was correct rather than on the *component*. This
+> probe answers a better question than reading the prompt template: if users
+> read `PASS` as "my button is fine", the verdict is functionally about the
+> component whatever the prompt intends, and the two vocabularies should be
+> merged rather than renamed.
+
+*Action (tests D6 / D7):*
+9. "What would you do next?"
+10. If Approve is showing: "What does approving this mean? Who is it for?"
+
+**28–30 min · Close**
+> "Is there anything I haven't asked that would help me understand this better?"
+
+Optional stretch only if time remains: let them paste their own component. See
+the caveat below before interpreting anything from it.
+
+---
+
+## Protocol B — Accessibility expert session (30 min)
+
+Covers RQ2 and RQ4. **Not** a source of RQ3 evidence — see the segment note
+above. The six minutes engineers spend on RQ1 go to content validity here,
+plus a longer review block.
+
+**3–6 min · Current practice**
+
+Brief and factual, to calibrate their answers rather than to answer RQ1:
+
+> "When you audit a component today, what do you actually use?"
+> "What does a finding have to include before you'd act on it?"
+
+**6–15 min · RQ2 — task, unaided**
+
+Same task and same rules as Protocol A: *"Find out whether this button is
+accessible enough to ship."* No mention of the panel, no help for 90 seconds.
+
+Experts will complete this faster than engineers, which is expected. What
+matters here is *where an expert hesitates anyway* — a stall for someone who
+knows the domain cold is a pure interface problem, with subject-matter
+confusion ruled out. That makes expert friction data unusually clean, and worth
+weighting heavily on RQ2 even though it is useless for RQ3.
+
+**15–27 min · RQ4 — content validity**
+
+Walk three or four findings, including at least one `Fail` and one `Unknown`:
+
+1. "Is this finding correct?"
+2. "Is the evidence it gives sufficient to justify that verdict?"
+3. "Is the recommended fix what you would advise?"
+4. "Anything it should have caught and didn't?" — false negatives matter more
+   than false positives for a tool claiming ship-readiness.
+5. Show the rule list. "Are these the right nine? What's missing?"
+6. "Would you trust this in a review? What would have to change first?"
+
+Probe 4 is the one most likely to produce an uncomfortable finding, which is
+why it is scripted rather than left to time remaining.
+
+**27–30 min · Close**
+> "Is there anything I haven't asked that would help me understand this better?"
+
+### Operational risks
+
+**1. The backend is a single point of failure.** DoubleCheck, RAG query, and
+echo all require Flask running with a live `ANTHROPIC_API_KEY`. A failure
+mid-session destroys the RQ3 half with no recovery inside 30 minutes.
+Mitigation: pre-flight the endpoint before every session, and prepare static
+screenshots of a completed DoubleCheck so probes 8–10 can be run verbally as a
+fallback.
+
+**2. Own-component paste will confound the `Unknown` data.** CSS is located by
+matching `.btn`, falling back to `button`, so a real-world component may
+under-analyse and return `Unknown` rows that look like evidence gaps but are
+selector misses. Keep the scripted task on the seeded sample. Discount any
+`Unknown` observed on a pasted component, and note it in the record rather than
+silently dropping it.
+
+**3. Buttons-only is an artificial task.** Name it in the framing so
+participants don't spend their think-aloud querying the scope instead of the
+interface.
+
+### Fixtures to prepare
+
+1. **Seeded sample** — known good: 85 light / 100 dark. Used for the main task.
+2. **No-CSS fixture** — TSX only, no stylesheet. Produces a high score with most
+   rules unverifiable, which is what probes 5–7 need. Verify before session one
+   that it actually returns a misleadingly high score; if the score lands low,
+   the probe doesn't work.
+3. **Static DoubleCheck screenshots** — light and dark, for backend fallback.
+
+### Synthesis plan
+
+Agreed before collection, per framework guidance:
+
+- One observation per note. Raw quote or observed action, never a summary.
+- Tag each with: RQ number · segment (engineer / expert) · participant id.
+- Mark confidence on every claim: **observed** (seen or heard directly) /
+  **inferred** (reasonable reading of what was seen) / **assumed** (belief with
+  no supporting observation).
+- Flag workarounds separately — they are the highest-value signal.
+- Keep a running tally per probe. Probe 7 ("would you ship this?") is a
+  countable yes/no across engineers and is the single most decision-relevant
+  number in the study.
+- Do not draft job stories during collection. Draft after, in Synthesise mode.
+
+### Research gaps this study will not close
+
+- **RQ1 at depth** — triggers and stalls get 6 minutes; no saturation.
+- **Whether anyone would adopt this** — unanswerable by observation, since there
+  is no adoption to observe. Deliberately out of scope.
+- **Whether the tool helps** — no before/after comparison, so any efficiency
+  claim remains unevidenced. The README's "hours saved" framing stays an
+  assumption after this study.
+- **Designers as a segment** — wave 1 is engineers and experts. D7 is therefore
+  tested against engineers but not fully contested.
+- **Repeat use over time** — a 30-minute first encounter says nothing about
+  whether findings stay legible on the fiftieth run.
+
+### Next
+
+Run the sessions, then return to `/layers-observed-behaviour` in **Synthesise
+mode** to extract observations, identify patterns, and draft candidate job
+stories with confidence ratings. Those feed `/layers-user-needs`.
