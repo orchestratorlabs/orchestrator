@@ -75,6 +75,40 @@ Ranked by impact:
 - Once the demo is live: **Try the live demo** primary, **View source**
   secondary.
 
+### Social preview assets — scheduled for week of 2026-08-03
+
+The source card is `public/og-image.png` (1200×630, brand card with logo,
+tagline, and a `#0540AB → #8DB6FF` gradient bar). It is already wired into
+`index.html` for the demo's own link previews. These items reuse it elsewhere.
+
+| # | Task | Where |
+| --- | --- | --- |
+| 2.1 | Upload as the **GitHub repo social preview** | Repo → Settings → General → Social preview |
+| 2.2 | Set the **case study page** social image | Squarespace → Page Settings → Social Image |
+| 2.3 | Set the **orchestratorlabs.ai** social image | Squarespace → Page Settings → Social Image |
+| 2.4 | Use as the **LinkedIn post** image when announcing | LinkedIn |
+| 2.5 | Add the demo to the **LinkedIn Featured** section | LinkedIn profile |
+| 2.6 | Use as the **deck title slide** | OrchestratoR™ deck |
+
+**Do 2.1 first** — it takes under a minute, needs no deploy, and without it
+GitHub shows an auto-generated grey card with the repo name whenever the repo
+link is shared.
+
+**Design call on 2.2.** For the *case study*, the workspace screenshot is
+probably the better social image than the brand card: a logo card says "this is
+a brand," while `docs/visual-reference/screenshots/workspace-light.png` showing
+85/100 with live findings says "this is a working product." Suggested split —
+screenshot for the case study, brand card for the org and landing page.
+
+**Size variants to generate** (all derivable from the existing source; ask
+Claude):
+
+- **1280×640** — GitHub's documented spec for social previews. The current
+  1200×630 works but GitHub will crop slightly.
+- **1200×1200** — square, occupies more vertical space in the LinkedIn feed
+  than a 1.91:1 image.
+- **A screenshot-based 1200×630** — for 2.2, per the design call above.
+
 ---
 
 ## 3. Engineering quality
@@ -104,6 +138,23 @@ below the 4.5:1 threshold, so `rule-5-text-contrast` correctly fails. The dark
 theme's `#595959` on `#D5D5D5` passes. Fixing that one token pair would give
 100/100 in both themes — decide whether a clean sweep or a demonstrated real
 failure is the better demo.
+
+**Open decision: is `rule-5-text-contrast` too strict?** WCAG 1.4.3 exempts
+disabled controls from the contrast minimum, so the light-mode failure may not be
+a WCAG violation at all. The project's own AI layer says as much — the Claude
+summary captured in `workspace-light.png` reads: *"Not a WCAG failure — disabled
+controls are exempt. OrchestratoR flags this as a design-system readability
+recommendation. Recommended token: #494949."*
+
+Two coherent resolutions, and the current state is neither:
+
+1. **Exempt disabled states** in the rule, and light mode scores 100.
+2. **Keep it**, and label it explicitly as a stricter-than-WCAG house rule in the
+   README, the case study, and ideally the finding's own text.
+
+Worth resolving because it changes the answer to "why isn't it 100?" — and
+because "our AI layer caught our own rule being conservative" is a strong
+interview anecdote, but only if the position is deliberate.
 
 ### 3.3 Evaluator scope
 
