@@ -164,6 +164,8 @@ interface WorkspacePaneProps {
   onA11yDoubleCheck: () => void;
   isDoubleChecking: boolean;
   a11yDoubleCheckError: string | null;
+  /** False on hosted deployments, where the local Flask service cannot be reached. */
+  isBackendReachable: boolean;
 }
 
 type AnnotationStatus = Extract<RuleResult["status"], "Fail" | "Unknown">;
@@ -496,6 +498,7 @@ export function WorkspacePane({
   onA11yDoubleCheck,
   isDoubleChecking,
   a11yDoubleCheckError,
+  isBackendReachable,
 }: WorkspacePaneProps) {
   const annotations = useMemo(
     () => buildAnnotations(evaluationResult, reactCode, cssCode),
@@ -587,7 +590,7 @@ export function WorkspacePane({
           >
             {isEvaluating ? "Evaluating..." : "Run Accessibility Check"}
           </button>
-          {evaluationResult !== null ? (
+          {evaluationResult !== null && isBackendReachable ? (
             <>
               <button
                 type="button"
@@ -633,7 +636,9 @@ export function WorkspacePane({
                 role="tooltip"
                 className="a11y-tooltip"
               >
-                Run A11Y DoubleCheck after the Accessibility Check.
+                {evaluationResult === null
+                  ? "Run A11Y DoubleCheck after the Accessibility Check."
+                  : "A11Y DoubleCheck requires the local Python service and is not available in this hosted demo."}
               </span>
             </div>
           )}

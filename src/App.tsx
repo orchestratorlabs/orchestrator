@@ -4,6 +4,7 @@ import { useOrchestratorState } from "./features/orchestrator/state/orchestrator
 import { SAMPLE_BUTTON_CSS, SAMPLE_BUTTON_CSS_DARK, SAMPLE_BUTTON_TSX, WorkspacePane } from "./features/workspace/WorkspacePane";
 import { useState } from "react";
 import { evaluateButtonAccessibility } from "./features/orchestrator/evaluator/buttonEvaluator";
+import { BACKEND_ORIGIN, IS_BACKEND_REACHABLE } from "./features/orchestrator/backend";
 import type { A11yDoubleCheckResult, EvaluationResult } from "./features/orchestrator/types/evaluation";
 
 function parseA11yDoubleCheckXml(xmlString: string): A11yDoubleCheckResult | null {
@@ -102,8 +103,14 @@ export function App() {
     "Component code loaded. Select a button state and run the accessibility check."
   );
 
+  // Hosted demos have no Flask service to confirm against; skip rather than
+  // firing a request that cannot succeed.
+  if (!IS_BACKEND_REACHABLE) {
+    return;
+  }
+
   try {
-    const response = await fetch("http://127.0.0.1:5001/echo", {
+    const response = await fetch(`${BACKEND_ORIGIN}/echo`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -154,9 +161,15 @@ export function App() {
   );
   setIsEvaluating(false);
 
+  // The score and findings above are already rendered. The Claude summary is
+  // additive and needs the local service, so skip it when hosted.
+  if (!IS_BACKEND_REACHABLE) {
+    return;
+  }
+
   setIsClaudeSummaryLoading(true);
   try {
-    const response = await fetch("http://127.0.0.1:5001/rag-query", {
+    const response = await fetch(`${BACKEND_ORIGIN}/rag-query`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -195,11 +208,21 @@ export function App() {
       ? JSON.stringify([selectedFinding])
       : JSON.stringify(evaluationResult.findings);
 
+    // Defensive: the control is rendered as unavailable when the backend cannot
+    // be reached, so this should not be callable. State the limitation plainly
+    // rather than reporting a failure if it somehow is.
+    if (!IS_BACKEND_REACHABLE) {
+      setA11yDoubleCheckError(
+        "A11Y DoubleCheck runs against the local Python service and is not available in this hosted demo."
+      );
+      return;
+    }
+
     setIsDoubleChecking(true);
     setA11yDoubleCheckError(null);
 
     try {
-      const response = await fetch("http://localhost:5001/a11y-doublecheck", {
+      const response = await fetch(`${BACKEND_ORIGIN}/a11y-doublecheck`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -220,7 +243,9 @@ export function App() {
       setDoubleCheckEvaluationSignature(evaluationSignature);
     } catch (error) {
       console.error("A11Y DoubleCheck error:", error);
-      setA11yDoubleCheckError("A11Y DoubleCheck request failed.");
+      setA11yDoubleCheckError(
+        "Could not reach the A11Y DoubleCheck service on port 5001. Check that app.py is running."
+      );
     } finally {
       setIsDoubleChecking(false);
     }
@@ -252,6 +277,7 @@ export function App() {
           onA11yDoubleCheck={handleA11yDoubleCheck}
           isDoubleChecking={isDoubleChecking}
           a11yDoubleCheckError={a11yDoubleCheckError}
+          isBackendReachable={IS_BACKEND_REACHABLE}
         />
         <OrchestratorPanel
           isOpen={isPanelOpen}

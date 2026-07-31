@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import type { A11yDoubleCheckResult, EvaluationResult } from "../types/evaluation";
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
+import { BACKEND_ORIGIN, IS_BACKEND_REACHABLE } from "../backend";
 
 interface OrchestratorPanelProps {
   isOpen: boolean;
@@ -107,11 +108,20 @@ export function OrchestratorPanel({
   const handleRagSubmit = async () => {
     if (!ragQuestion.trim()) return;
 
+    // State the limitation rather than reporting a load failure on hosted demos,
+    // where the local Flask service cannot be reached.
+    if (!IS_BACKEND_REACHABLE) {
+      setRagError(
+        "Ask OrchestratoR runs against the local Python service and is not available in this hosted demo."
+      );
+      return;
+    }
+
     setIsRagLoading(true);
     setRagError("");
 
     try {
-      const response = await fetch("http://127.0.0.1:5001/rag-query", {
+      const response = await fetch(`${BACKEND_ORIGIN}/rag-query`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
