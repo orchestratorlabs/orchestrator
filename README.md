@@ -25,6 +25,24 @@ compliance into measurable time and cost savings.
 
 ---
 
+![OrchestratoR workspace: the sample button scores 85 out of 100 in light mode, with a failing text-contrast finding and a Claude-written summary reframing it as a design-system recommendation](docs/visual-reference/screenshots/workspace-light.png)
+
+Deterministic rules produce the score. Claude explains it. Here the contrast rule
+reports a failure, and the summary adds the nuance the rule cannot: disabled
+controls are exempt under WCAG, so this is a design-system readability
+recommendation rather than a violation — with a specific replacement token.
+
+### The same component, evaluated in dark mode
+
+![The same button evaluated in dark mode, scoring 100 out of 100 with all nine rules passing](docs/visual-reference/screenshots/workspace-dark.png)
+
+Identical markup, identical rules — **85 in light, 100 in dark.** The failure is
+in the light theme's disabled tokens (`--Text-Disabled: #8C8C8C` on
+`--Bg-Disabled: #BDBDBD`, roughly 1.79:1), which is exactly the kind of
+theme-specific gap that survives design review and manual QA.
+
+---
+
 ## What it does
 
 Paste a button component's React and CSS into the workspace and OrchestratoR
