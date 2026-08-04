@@ -87,6 +87,43 @@ Ranked by impact:
 6. **An email capture** — e.g. "Get notified when card and input components
    ship." Signals a product with a trajectory.
 
+### Product video — YouTube, landing page, LinkedIn
+
+Record a short product video and publish it to the YouTube channel:
+<https://www.youtube.com/@CraigMaherAIUX>
+
+**Two assets, not one** — they have different jobs:
+
+| Asset | Length | Sound | Used for |
+| --- | --- | --- | --- |
+| **Short clip / GIF** | 10–15s | Silent, looping | Landing page above the fold, LinkedIn native upload, case study |
+| **Walkthrough** | 60–90s | Narrated | YouTube, linked from the case study and the repo README |
+
+**Storyboard — lead with the insight, not a feature tour:**
+
+1. Show the two code panes — real React and CSS, not a mockup
+2. Run the evaluation → **85/100**, 8 pass, 1 fail
+3. Click the failing finding → jumps to the exact CSS line, marking
+   `color: var(--Text-Disabled)`
+4. Switch to dark mode, re-run → **100/100**
+5. Land the point: *same component, same code, one theme passes and one does
+   not — and it names the exact token at fault*
+6. Cycle the five preview states
+7. A11Y DoubleCheck last, for the walkthrough version only (needs `app.py`
+   running, so it cannot be filmed against the hosted demo)
+
+Steps 4–5 are the hook. Everything else is supporting detail.
+
+**Publishing notes:**
+
+- **Upload to LinkedIn natively.** LinkedIn deprioritises posts containing
+  outbound links, including YouTube ones. Native video plus the demo URL in the
+  post text or first comment reaches further than a YouTube link.
+- **Squarespace can embed the YouTube version** on the landing page, but an
+  autoplaying silent loop of the short clip works better above the fold.
+- Film it locally with `app.py` running so the Claude summary populates —
+  the hosted demo cannot show the agentic double-check.
+
 ### Link conventions (settled)
 
 - Bio and case study link to the **story**, never the repo.
