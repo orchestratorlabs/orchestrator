@@ -4,7 +4,7 @@ Running list of fixes, ideas, and decisions not yet acted on. Newest thinking at
 the top of each section. Companion to
 [vercel-demo-deploy-runbook.md](design/vercel-demo-deploy-runbook.md).
 
-Last updated: 2026-07-31
+Last updated: 2026-08-04
 
 ---
 
@@ -12,17 +12,37 @@ Last updated: 2026-07-31
 
 | # | Item | Owner | Status |
 | --- | --- | --- | --- |
-| 1.1 | A11Y DoubleCheck / Ask OrchestratoR show an intentional "needs local service" message instead of a failure when hosted | Claude | **Done, uncommitted** |
-| 1.2 | `index.html` metadata — `<title>`, `<meta name="description">`, `og:title` / `og:description` / `og:image`, favicon | Claude | Open |
-| 1.3 | Embed `docs/visual-reference/screenshots/` images in the README | Claude | Open |
-| 1.4 | Deploy to Vercel, add `demo.orchestratorlabs.ai` CNAME in Squarespace | Craig | Open |
-| 1.5 | Add the live demo link to the top of the README | Claude, after 1.4 | Open |
+| 1.1 | A11Y DoubleCheck / Ask OrchestratoR show an intentional "needs local service" message instead of a failure when hosted | Claude | **Done** — `9be7cd2` |
+| 1.2 | `index.html` metadata — title, description, Open Graph, favicons | Claude | **Done** — `71d30be` |
+| 1.3 | Embed workspace screenshots in the README | Claude | **Done** — `dabdbf2` |
+| 1.4 | **Deploy to Vercel** | Craig | Open — target week of 2026-08-03 |
+| 1.5 | Add `demo.orchestratorlabs.ai` CNAME in Squarespace | Craig | Open, after 1.4 |
+| 1.6 | Add the live demo link to the top of the README | Claude, after 1.4 | Open |
+| 1.7 | Run LinkedIn Post Inspector on the live demo URL to prime the cache before announcing | Craig, after 1.5 | Open |
 
-**On 1.2 — why it matters.** Currently `<title>Orchestrator MVP</title>` with no
-description, no social preview, and no favicon. That is what appears when the
-demo URL is pasted into LinkedIn, Slack, or an email — "Orchestrator MVP" with no
-image. For a product designer sharing a link with recruiters, it is the most
-visible polish gap in the project.
+**On 1.4 — no server is needed, and no domain either.** This was mistaken for a
+hosting purchase. It is not:
+
+- **Vercel is the server.** It clones the repo, runs `npm run build`, and serves
+  `dist/` on its CDN. Free on the Hobby tier. Nothing to provision or maintain.
+- **A working URL arrives immediately.** Deploying gives a live HTTPS address such
+  as `orchestrator-demo.vercel.app` with **no DNS involved**. That is entirely
+  adequate for an interview link, so 1.4 is not blocked on 1.5.
+- **The custom subdomain is polish, done second.** It reads better on the case
+  study, and the `og:image` tags in `index.html` point at
+  `demo.orchestratorlabs.ai`, so link previews need it eventually — but it is one
+  CNAME record on a domain already owned, not a server.
+
+Order: deploy first, share the `*.vercel.app` URL if useful, then add the CNAME.
+See [`design/vercel-demo-deploy-runbook.md`](design/vercel-demo-deploy-runbook.md)
+§4 for the project setup. The one common blocker is granting Vercel access to the
+**`orchestratorlabs` organisation**, or the repo will not appear in the import
+list.
+
+**On 1.7 — why it matters.** LinkedIn, Slack and iMessage cache link previews per
+URL for roughly a week. Sharing the demo before its Open Graph tags resolve means
+a broken preview gets cached and kept. `linkedin.com/post-inspector` forces a
+re-scrape and needs no post to be published.
 
 ---
 
@@ -83,16 +103,36 @@ tagline, and a `#0540AB → #8DB6FF` gradient bar). It is already wired into
 
 | # | Task | Where |
 | --- | --- | --- |
-| 2.1 | Upload as the **GitHub repo social preview** | Repo → Settings → General → Social preview |
+| 2.1 | ~~Upload as the **GitHub repo social preview**~~ | **Done 2026-08-04** — uploaded `public/github-social-preview.png` (1280×640), verified via LinkedIn Post Inspector |
 | 2.2 | Set the **case study page** social image | Squarespace → Page Settings → Social Image |
 | 2.3 | Set the **orchestratorlabs.ai** social image | Squarespace → Page Settings → Social Image |
 | 2.4 | Use as the **LinkedIn post** image when announcing | LinkedIn |
 | 2.5 | Add the demo to the **LinkedIn Featured** section | LinkedIn profile |
 | 2.6 | Use as the **deck title slide** | OrchestratoR™ deck |
 
-**Do 2.1 first** — it takes under a minute, needs no deploy, and without it
-GitHub shows an auto-generated grey card with the repo name whenever the repo
-link is shared.
+**2.1 verification gotcha.** `opengraph.githubassets.com/<n>/<owner>/<repo>`
+always renders GitHub's **auto-generated** card and is unaffected by an upload —
+it is not a way to check the result. Confirm instead that the `og:image` meta tag
+on the repo page points at `repository-images.githubusercontent.com`, or use
+`linkedin.com/post-inspector`, which also primes LinkedIn's cache.
+
+GitHub's documented spec is 1280×640 (2:1), which is why
+`public/github-social-preview.png` exists separately from `public/og-image.png`
+(1200×630, matching the dimensions declared in the `index.html` Open Graph tags).
+
+**Open question on the About text.** GitHub composes the social title as
+`GitHub - orchestratorlabs/orchestrator: ` plus the About field, and LinkedIn
+truncates at roughly 100 characters — so the 40-character prefix leaves only ~60
+characters of the description visible, and the trailing `© 2026` is never seen in
+a feed. Leading the About with `OrchestratoR™` is therefore redundant. A tighter
+alternative, deferred for now:
+
+> Accessibility co-pilot POC — WCAG evaluation for buttons, with live light/dark
+> preview and agentic double-check analysis. Portfolio demo. © 2026 orchestratorlabs.
+
+Also note: "agentic" describes a single RAG-plus-Claude validation call rather
+than a multi-step agent loop. `AI-assisted validation` is the precise phrasing;
+"agentic" is the aspirational one, and may invite a technical question.
 
 **Design call on 2.2.** For the *case study*, the workspace screenshot is
 probably the better social image than the brand card: a logo card says "this is
