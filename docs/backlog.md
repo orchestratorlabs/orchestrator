@@ -87,7 +87,7 @@ Ranked by impact:
 6. **An email capture** — e.g. "Get notified when card and input components
    ship." Signals a product with a trajectory.
 
-### Product video — YouTube, landing page, LinkedIn
+### Product video — YouTube, landing page, LinkedIn *(start 2026-09-01)*
 
 Record a short product video and publish it to the YouTube channel:
 <https://www.youtube.com/@CraigMaherAIUX>
@@ -123,6 +123,42 @@ Steps 4–5 are the hook. Everything else is supporting detail.
   autoplaying silent loop of the short clip works better above the fold.
 - Film it locally with `app.py` running so the Claude summary populates —
   the hosted demo cannot show the agentic double-check.
+- **Then share it with Greg Nudelman.** Worth having the demo URL and the case
+  study finished first, so the video is an entry point rather than the whole
+  artefact.
+
+### Medium article *(start 2026-09-01)*
+
+Write and publish a Medium piece, cross-linked to the demo, the case study and
+the YouTube walkthrough.
+
+**Candidate angles, strongest first:**
+
+1. **"My own AI layer told me my accessibility rule was wrong."** The
+   deterministic rule flags the disabled-state contrast as a failure; the Claude
+   summary replies that WCAG 1.4.3 *exempts* disabled controls, reframes it as a
+   design-system recommendation, and names a replacement token. Specific, honest,
+   and unlike most AI-UX writing it contains a correction rather than a victory
+   lap. **Depends on resolving §3.2 first** — the article needs a decided
+   position, not an open question.
+2. **"Same component, two themes, two scores."** The 85 vs 100 story. Concrete and
+   visual, carried by the two screenshots already in the README.
+3. **"Deterministic scoring, AI explanation — why the model should not own the
+   score."** The architectural argument. Differentiated, since most AI demos let
+   the model decide everything.
+4. **"Designing with AI, not just for it."** Broadest, and the closest to the
+   existing portfolio bio — but the least specific, so the easiest to write and
+   the easiest to ignore.
+
+**Assets already available to reuse:**
+
+- `docs/visual-reference/screenshots/workspace-light.png` and `workspace-dark.png`
+- The product video, once filmed
+- The live demo URL, once deployed
+- The case study, for a "full write-up" link
+
+**Sequencing:** demo deployed → video filmed → article written last, so it can
+link to both and end with a working call to action rather than a promise.
 
 ### Link conventions (settled)
 
