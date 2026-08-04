@@ -103,7 +103,7 @@ tagline, and a `#0540AB → #8DB6FF` gradient bar). It is already wired into
 
 | # | Task | Where |
 | --- | --- | --- |
-| 2.1 | ~~Upload as the **GitHub repo social preview**~~ | **Done 2026-08-04** — uploaded `public/github-social-preview.png` (1280×640), verified via LinkedIn Post Inspector |
+| 2.1 | ~~Upload as the **GitHub repo social preview**~~ | **Done 2026-08-04** — `public/github-social-preview.png` (1280×640) uploaded, About text updated, wording aligned on "agentic double-check", verified via LinkedIn Post Inspector |
 | 2.2 | Set the **case study page** social image | Squarespace → Page Settings → Social Image |
 | 2.3 | Set the **orchestratorlabs.ai** social image | Squarespace → Page Settings → Social Image |
 | 2.4 | Use as the **LinkedIn post** image when announcing | LinkedIn |
@@ -120,15 +120,19 @@ GitHub's documented spec is 1280×640 (2:1), which is why
 `public/github-social-preview.png` exists separately from `public/og-image.png`
 (1200×630, matching the dimensions declared in the `index.html` Open Graph tags).
 
-**Open question on the About text.** GitHub composes the social title as
+**Settled 2026-08-04 — the About text.** GitHub composes the social title as
 `GitHub - orchestratorlabs/orchestrator: ` plus the About field, and LinkedIn
 truncates at roughly 100 characters — so the 40-character prefix leaves only ~60
 characters of the description visible, and the trailing `© 2026` is never seen in
-a feed. Leading the About with `OrchestratoR™` is therefore redundant. A tighter
-alternative, deferred for now:
+a feed. Leading the About with `OrchestratoR™` is therefore redundant. Now in
+use, with that prefix dropped:
 
 > Accessibility co-pilot POC — WCAG evaluation for buttons, with live light/dark
-> preview and agentic double-check analysis. Portfolio demo. © 2026 orchestratorlabs.
+> preview and agentic double-check. Portfolio demo. © 2026 orchestratorlabs.
+
+The card graphics and all three `index.html` description tags carry the matching
+sub-line, so the card, the description and the product's own button label all say
+"agentic double-check".
 
 Also note: "agentic" describes a single RAG-plus-Claude validation call rather
 than a multi-step agent loop. `AI-assisted validation` is the precise phrasing;
