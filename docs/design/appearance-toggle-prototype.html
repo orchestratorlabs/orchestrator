@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en" data-appearance="system">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Appearance toggle — prototype</title>
+    <style>
+      /* ---------------------------------------------------------------
+         Dark tokens: the seven already in src/styles.css :root
+         --------------------------------------------------------------- */
+      :root {
+        --bg: #0f1117;
+        --surface: #161b23;
+        --surface-2: #1d2430;
+        --border: #2a3240;
+        --text: #e7ebf3;
+        --muted: #9aa6ba;
+        --accent: #4f8cff;
+        /* Borders on interactive controls, where the border is the cue that
+           identifies the control. WCAG 1.4.11 wants 3:1 for that; decorative
+           dividers can stay subtle. */
+        --border-strong: #67728a;
+        /* White on #4f8cff is only 3.22:1 — below AA. Dark text on the accent
+           gives 5.87:1, and matches the pattern the POC itself uses in dark
+           mode (dark label on a light blue fill). */
+        --on-accent: #0f1117;
+        color-scheme: dark;
+      }
+
+      /* Light tokens. Proposed values — contrast-checked against WCAG AA. */
+      html[data-appearance="light"] {
+        --bg: #f7f8fa;
+        --surface: #ffffff;
+        --surface-2: #edf0f5;
+        --border: #d5dae3;
+        --text: #1a1a1a;
+        --muted: #5a6472;
+        --accent: #0f62d6;
+        --border-strong: #818b9e;
+        --on-accent: #ffffff;
+        color-scheme: light;
+      }
+
+      /* "System" follows the OS setting. */
+      @media (prefers-color-scheme: light) {
+        html[data-appearance="system"] {
+          --bg: #f7f8fa;
+          --surface: #ffffff;
+          --surface-2: #edf0f5;
+          --border: #d5dae3;
+          --text: #1a1a1a;
+          --muted: #5a6472;
+          --accent: #0f62d6;
+          --border-strong: #818b9e;
+          --on-accent: #ffffff;
+          color-scheme: light;
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+        font-size: 15px;
+        transition: background-color 160ms ease, color 160ms ease;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px; height: 1px;
+        padding: 0; margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* ---------------------------------------------------------------
+         Top bar — where the Appearance control belongs, beside Admin
+         --------------------------------------------------------------- */
+      .top-bar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 20px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .top-search {
+        flex: 1;
+        padding: 9px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-strong);
+        background: var(--bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .top-bar-btn {
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border-strong);
+        background: var(--surface-2);
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      /* ---------------------------------------------------------------
+         The Appearance control: native radios, segmented-pill appearance
+         --------------------------------------------------------------- */
+      .appearance {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+
+      .appearance__label {
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .appearance__group {
+        display: flex;
+        background: var(--surface-2);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        padding: 2px;
+      }
+
+      .appearance__group label {
+        padding: 5px 12px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+        border-radius: 6px;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 120ms ease, color 120ms ease;
+      }
+
+      .appearance__group label:hover { color: var(--text); }
+
+      /* Selected state */
+      .appearance__group input:checked + label {
+        background: var(--accent);
+        color: var(--on-accent);
+      }
+
+      /* THE detail that matters: the inputs are visually hidden, so the
+         focus ring has to be drawn on the adjacent label instead. Without
+         this, keyboard users cannot see where they are. */
+      .appearance__group input:focus-visible + label {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* ---------------------------------------------------------------
+         Body: chrome that themes, plus a canvas that must NOT
+         --------------------------------------------------------------- */
+      main { padding: 24px 20px; display: grid; gap: 20px; }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px;
+      }
+
+      .card h2 { margin: 0 0 6px; font-size: 15px; }
+      .card p { margin: 0; color: var(--muted); font-size: 14px; }
+
+      .canvas-shell { padding: 0; overflow: hidden; }
+
+      .canvas-shell__head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .canvas-shell__head strong { font-size: 14px; }
+      .canvas-shell__head span { font-size: 12px; color: var(--muted); }
+
+      /* Deliberately hardcoded, NOT tokenised. In the real app this area is
+         a shadow root, so app CSS cannot reach it at all. */
+      .canvas {
+        background: #1a1a1a;
+        min-height: 150px;
+        display: flex;
+        align-items: center;
+        padding: 24px;
+      }
+
+      .canvas__btn {
+        min-width: 44px; min-height: 44px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 0.5rem;
+        background: #8db6ff;
+        color: #1a1a1a;
+        font: 500 16px/1.2 -apple-system, Arial, sans-serif;
+        cursor: pointer;
+      }
+
+      .note {
+        font-size: 13px;
+        color: var(--muted);
+        border-left: 3px solid var(--accent);
+        padding: 4px 0 4px 12px;
+      }
+
+      code {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+        background: var(--surface-2);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="top-bar">
+      <input class="top-search" type="search" placeholder="Search files, components or commands" aria-label="Search" />
+
+      <fieldset class="appearance">
+        <legend class="sr-only">Appearance</legend>
+        <span class="appearance__label" aria-hidden="true">Appearance</span>
+        <div class="appearance__group">
+          <input class="sr-only" type="radio" name="appearance" id="ap-light" value="light" />
+          <label for="ap-light">Light</label>
+
+          <input class="sr-only" type="radio" name="appearance" id="ap-dark" value="dark" />
+          <label for="ap-dark">Dark</label>
+
+          <input class="sr-only" type="radio" name="appearance" id="ap-system" value="system" checked />
+          <label for="ap-system">System</label>
+        </div>
+      </fieldset>
+
+      <button class="top-bar-btn" type="button">Admin</button>
+    </header>
+
+    <main>
+      <p class="note">
+        Try it: click the options, then <strong>Tab</strong> to the group and use the
+        <strong>arrow keys</strong>. Single selection and arrow navigation come free from
+        native radios. The focus ring is drawn on the label, because the radio itself is
+        visually hidden.
+      </p>
+
+      <section class="card">
+        <h2>Interface chrome</h2>
+        <p>
+          This card, the top bar and the panel below all read from the seven tokens in
+          <code>:root</code>, so they re-theme together.
+        </p>
+      </section>
+
+      <section class="card canvas-shell">
+        <div class="canvas-shell__head">
+          <strong>Live Component Preview: Button</strong>
+          <span>Preview theme is a separate, independent control</span>
+        </div>
+        <div class="canvas">
+          <button class="canvas__btn" type="button">Button large</button>
+        </div>
+      </section>
+
+      <p class="note">
+        The dark strip above never changes, whichever Appearance you pick — that is the
+        behaviour you asked for. Here it is hardcoded to prove the point; in the real app
+        the preview lives in a <strong>shadow root</strong>, so application CSS physically
+        cannot reach it.
+      </p>
+    </main>
+
+    <script>
+      const html = document.documentElement;
+      for (const input of document.querySelectorAll('input[name="appearance"]')) {
+        input.addEventListener("change", (e) => {
+          html.setAttribute("data-appearance", e.target.value);
+        });
+      }
+    </script>
+  </body>
+</html>

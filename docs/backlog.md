@@ -174,6 +174,62 @@ interview anecdote, but only if the position is deliberate.
 - Optional: copyright headers in `app.py`, `src/App.tsx`, `buttonEvaluator.ts`.
   These travel with the file if copied, unlike repo metadata.
 
+### 3.5 Interface Appearance toggle — approved, not yet built
+
+Let engineers theme the **application chrome** independently of the component
+preview canvas. Default to their OS setting; let them switch. Discussed and
+agreed 2026-08-03; deferred, not dropped.
+
+**Working prototype:**
+[`design/appearance-toggle-prototype.html`](design/appearance-toggle-prototype.html)
+— self-contained, open it directly in a browser. Demonstrates the control, the
+theme switching, keyboard behaviour, and a canvas that stays put.
+
+**Settled decisions:**
+
+- **Scope A**, not a full theming pass. Theme only the seven existing `:root`
+  tokens — chrome surfaces, borders, text. Leave the code editors and status
+  pills dark. Light chrome with dark code panes is what VS Code and GitHub ship,
+  so it reads as deliberate rather than half-finished. Roughly an hour, against
+  half a day for the full audit of all 101 hardcoded hexes.
+- **Call it "Appearance"**, never "Light mode / Dark mode". Those words belong to
+  the preview toggle.
+- **Put it in the top bar beside `Admin`**, not near the canvas.
+- **Three options: Light / Dark / System**, with System the default via
+  `prefers-color-scheme`.
+- **Segmented pill, built on native radios** that are visually hidden with
+  styled labels. Gets arrow-key navigation and single-selection semantics free.
+  **The focus ring must be drawn on the label** (`input:focus-visible + label`),
+  since the input itself is invisible.
+
+**Why the canvas is already safe:** the preview renders in a **shadow root**, so
+application CSS physically cannot reach it. The isolation is architectural, not
+something to build.
+
+**The main risk is UX, not code.** Two Light/Dark controls on screen meaning
+different things. The preview toggle is *load-bearing* — it changes which CSS
+gets evaluated (`App.tsx` swaps `SAMPLE_BUTTON_CSS` for `SAMPLE_BUTTON_CSS_DARK`)
+— whereas Appearance is a cosmetic preference. Distinct labels and placement are
+required, not optional.
+
+**Two new tokens the prototype adds, both from real contrast failures:**
+
+- `--on-accent` — white on the existing `--accent: #4f8cff` is only **3.22:1**,
+  below AA. Dark text on the accent gives 5.87:1, matching the pattern the POC
+  already uses in dark mode.
+- `--border-strong` — for borders that identify a control, where WCAG 1.4.11
+  wants 3:1. Decorative dividers can stay subtle.
+
+All 14 pairings in the prototype pass. **Verify contrast programmatically before
+shipping** — a light theme with failing contrast would be the most quotable flaw
+in the project, and the evaluator cannot check its own chrome since it only reads
+buttons.
+
+**Pre-existing, separate decision:** the current dark `--border: #2a3240` on
+`--surface: #161b23` is **1.34:1**. Subtle borders are already the norm in the
+live app, so this is a standing question rather than a regression introduced by
+the light theme.
+
 ---
 
 ## 4. If the Python backend is ever hosted
