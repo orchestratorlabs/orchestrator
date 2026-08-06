@@ -291,41 +291,60 @@ interview anecdote, but only if the position is deliberate.
 - Optional: copyright headers in `app.py`, `src/App.tsx`, `buttonEvaluator.ts`.
   These travel with the file if copied, unlike repo metadata.
 
-### 3.6 The evaluator reads `var()` fallbacks, not the resolved token
+### 3.6 Both the evaluator and the preview read `var()` fallbacks, not the resolved token
 
 `#8C8C8C` appears twice in the seeded light CSS:
 
 ```
-line 11:  --Text-Disabled: #8C8C8C;              /* the design token */
-line 46:  color: var(--Text-Disabled, #8C8C8C);  /* the var() fallback */
+line 11:  --Text-Disabled: #8C8C8C;              /* the design token — what ships */
+line 46:  color: var(--Text-Disabled, #8C8C8C);  /* the fallback — ignored by browsers */
 ```
 
-The contrast rule reads the **fallback**, not the cascade. Verified by running
-the evaluator against each edit in isolation:
+**The app reads line 46. A browser reads line 11.**
 
-| Edit | Score | Button actually changes? |
+The contrast rule matches on the `var()` fallback, and `buildPreviewStateCss` in
+`LiveButtonPreview.tsx` does the same — `extractCssVarFallback` is tried first,
+and `extractCssTokenValue` only runs when no fallback is present. The resulting
+`.btn.btn--disabled { color: … }` is injected after the user CSS, so it wins the
+cascade.
+
+So the two halves **agree with each other**, and the demo behaves consistently:
+
+| Edit | Preview updates? | Score changes? |
 | --- | --- | --- |
-| `:root` token only (line 11) | **85 — unchanged** | **Yes** |
-| `var()` fallback only (line 46) | **100** | **No** |
-| Both | 100 | Yes |
+| Fallback, line 46 | **Yes, live** | **Yes → 100** |
+| `:root` token, line 11 | No | No |
+| Both | Yes | Yes |
 
-That is backwards from how CSS resolves: a browser uses the `:root` value and
-only falls back when the variable is undefined. So a reviewer who fixes the
-**design token** — the natural instinct, and the semantically correct fix — sees
-the button visibly change while the score stays at 85. And one who edits only
-the fallback scores 100 with no visual change.
+**The problem is fidelity to real CSS, not internal inconsistency.** A browser
+uses the `:root` value and ignores the fallback, so against production CSS the
+tool can be wrong in both directions:
 
-**Why it matters now:** the guided demo flow is safe, because the finding's
-marker lands on line 46, so anyone following the highlight edits the right line.
-But an off-script reviewer gets "I fixed it and the score didn't move," which is
-the worst possible impression for this tool.
+- A developer fixes the **design token** — the correct fix in their real product
+  — and OrchestratoR reports *still failing*, when in production it would pass.
+  **False negative.**
+- A developer edits only the **fallback** and OrchestratoR reports *fixed*, when
+  in production nothing changed. **False positive.**
 
-**The fix:** resolve `:root` custom properties before evaluating, and treat the
-`var()` fallback as what it is — a fallback used only when the property is
-undefined. Larger than a patch, since it means a small custom-property
-resolution pass over the CSS ahead of the rules. Related to [[3.3]] evaluator
-scope: the same resolution step is a prerequisite for handling arbitrary pasted
-CSS.
+That undercuts the core claim: "this is what your code evaluates to."
+
+**The fix, and it must be done as one change:** resolve `:root` custom properties
+before evaluating, and treat the `var()` fallback as what it is — used only when
+the property is undefined. Apply it to **both** the evaluator and
+`buildPreviewStateCss`. Fixing only the evaluator would make the score respond to
+line 11 while the preview still responds to line 46, creating a real divergence
+where none exists today.
+
+Then point the annotation at **line 11**, since that is where a developer fixes
+it. The line-number gutter shipped in `f48e275` makes that visible — previously
+there was no way to tell which line a marker referred to.
+
+Related to 3.3 evaluator scope: the same custom-property resolution pass is a
+prerequisite for handling arbitrary pasted CSS.
+
+**Possible follow-on feature:** once resolution exists, a token and its fallback
+disagreeing (`--Text-Disabled: #8C8C8C` with a `#494949` fallback) is a
+contradictory design system worth flagging in its own right.
 
 ### 3.5 Interface Appearance toggle — approved, not yet built
 
