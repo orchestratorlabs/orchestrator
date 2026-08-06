@@ -164,6 +164,29 @@ the YouTube walkthrough.
 **Sequencing:** demo deployed → video filmed → article written last, so it can
 link to both and end with a working call to action rather than a promise.
 
+### Where to put the demo URL — now that it is live
+
+`demo.orchestratorlabs.ai` — short enough to read aloud, type from a printed page,
+and drop into a sentence. That is the payoff for using a real subdomain rather
+than a `*.vercel.app` address.
+
+| # | Place | Notes |
+| --- | --- | --- |
+| 2.7 | **Case study page** — "Try the live demo" as the **primary** link near the top | Highest impact. Was blocked on the URL existing |
+| 2.8 | **Cover letters** | Bare domain, no `https://` — reads cleanly in prose and in print |
+| 2.9 | **Résumé / CV** | One line under the OrchestratoR entry |
+| 2.10 | **LinkedIn Featured section** | Renders with the OG card; preview cache already primed |
+| 2.11 | **Job application forms** | The "portfolio" or "website" field |
+| 2.12 | **Interview follow-up emails** | Alongside the repo link for anyone technical |
+
+**Ordering on any page that has both:** demo first, repo second. The demo shows the
+product; the repo is where a technical reader verifies you built it. See the link
+conventions below.
+
+**One practical note for print and plain text:** write it as
+`demo.orchestratorlabs.ai`, not the full `https://` form. It stays clickable in
+most clients and reads better in a sentence.
+
 ### Link conventions (settled)
 
 - Bio and case study link to the **story**, never the repo.
