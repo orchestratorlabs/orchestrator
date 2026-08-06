@@ -291,6 +291,42 @@ interview anecdote, but only if the position is deliberate.
 - Optional: copyright headers in `app.py`, `src/App.tsx`, `buttonEvaluator.ts`.
   These travel with the file if copied, unlike repo metadata.
 
+### 3.6 The evaluator reads `var()` fallbacks, not the resolved token
+
+`#8C8C8C` appears twice in the seeded light CSS:
+
+```
+line 11:  --Text-Disabled: #8C8C8C;              /* the design token */
+line 46:  color: var(--Text-Disabled, #8C8C8C);  /* the var() fallback */
+```
+
+The contrast rule reads the **fallback**, not the cascade. Verified by running
+the evaluator against each edit in isolation:
+
+| Edit | Score | Button actually changes? |
+| --- | --- | --- |
+| `:root` token only (line 11) | **85 — unchanged** | **Yes** |
+| `var()` fallback only (line 46) | **100** | **No** |
+| Both | 100 | Yes |
+
+That is backwards from how CSS resolves: a browser uses the `:root` value and
+only falls back when the variable is undefined. So a reviewer who fixes the
+**design token** — the natural instinct, and the semantically correct fix — sees
+the button visibly change while the score stays at 85. And one who edits only
+the fallback scores 100 with no visual change.
+
+**Why it matters now:** the guided demo flow is safe, because the finding's
+marker lands on line 46, so anyone following the highlight edits the right line.
+But an off-script reviewer gets "I fixed it and the score didn't move," which is
+the worst possible impression for this tool.
+
+**The fix:** resolve `:root` custom properties before evaluating, and treat the
+`var()` fallback as what it is — a fallback used only when the property is
+undefined. Larger than a patch, since it means a small custom-property
+resolution pass over the CSS ahead of the rules. Related to [[3.3]] evaluator
+scope: the same resolution step is a prerequisite for handling arbitrary pasted
+CSS.
+
 ### 3.5 Interface Appearance toggle — approved, not yet built
 
 Let engineers theme the **application chrome** independently of the component

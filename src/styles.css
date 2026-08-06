@@ -842,6 +842,16 @@ body {
   font-size: 14px;
 }
 
+/* Provenance note shown when the summary was generated locally rather than by
+   Claude. Deliberately quieter than the summary itself, but not hidden. */
+.score-interpretation-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  opacity: 0.75;
+  font-style: italic;
+}
+
 .score-interp-heading {
   display: flex;
   align-items: center;

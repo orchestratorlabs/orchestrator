@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import type { A11yDoubleCheckResult, EvaluationResult } from "../types/evaluation";
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
 import { BACKEND_ORIGIN, IS_BACKEND_REACHABLE } from "../backend";
+import { buildLocalScoreSummary } from "../localScoreSummary";
 
 interface OrchestratorPanelProps {
   isOpen: boolean;
@@ -50,6 +51,20 @@ export function OrchestratorPanel({
   const unknownCount =
     evaluationResult?.findings.filter((finding) => finding.status === "Unknown").length ?? 0;
   const failCount = evaluationResult?.findings.filter((finding) => finding.status === "Fail").length ?? 0;
+
+  /**
+   * Stands in for the Claude-written summary when the local Flask service is
+   * unreachable — always on a hosted deployment, and locally when app.py is not
+   * running. Derived from the real findings, and labelled as locally generated
+   * so it is not mistaken for the agentic double-check.
+   */
+  const localScoreSummary = useMemo(
+    () =>
+      evaluationResult && !claudeSummary && !isClaudeSummaryLoading
+        ? buildLocalScoreSummary(evaluationResult.findings, evaluatedMode)
+        : null,
+    [evaluationResult, claudeSummary, isClaudeSummaryLoading, evaluatedMode]
+  );
 
   const isDoubleCheckStale =
     a11yDoubleCheckResult !== null &&
@@ -370,7 +385,7 @@ export function OrchestratorPanel({
         )}
       </section>
 
-      {evaluationResult && (isClaudeSummaryLoading || claudeSummary) && (
+      {evaluationResult && (isClaudeSummaryLoading || claudeSummary || localScoreSummary) && (
         <section className="panel-card">
           <div className="score-interp-heading">
             <h3>Score Summary</h3>
@@ -390,7 +405,9 @@ export function OrchestratorPanel({
                 className="score-interp-tooltip"
                 aria-hidden={!scoreInterpTooltipOpen}
               >
-                The Score Summary is calculated by OrchestratoR's accessibility checks. Claude helps explain what the score means and what to fix.
+                {claudeSummary || isClaudeSummaryLoading
+                  ? "The Score Summary is calculated by OrchestratoR's accessibility checks. Claude helps explain what the score means and what to fix."
+                  : "The Score Summary is calculated by OrchestratoR's accessibility checks. This summary is generated locally from those results; Claude's explanation requires the local Python service."}
               </div>
             </div>
           </div>
@@ -404,7 +421,17 @@ export function OrchestratorPanel({
               </span>
             </p>
           ) : (
-            <p className="muted score-interpretation-body">{claudeSummary && renderWithCopyableHex(claudeSummary)}</p>
+            <>
+              <p className="muted score-interpretation-body">
+                {renderWithCopyableHex(claudeSummary ?? localScoreSummary ?? "")}
+              </p>
+              {!claudeSummary && localScoreSummary && (
+                <p className="muted score-interpretation-note">
+                  Summarised locally from the rule results. The agentic double-check runs
+                  with the local Python service.
+                </p>
+              )}
+            </>
           )}
         </section>
       )}
