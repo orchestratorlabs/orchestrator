@@ -291,61 +291,6 @@ interview anecdote, but only if the position is deliberate.
 - Optional: copyright headers in `app.py`, `src/App.tsx`, `buttonEvaluator.ts`.
   These travel with the file if copied, unlike repo metadata.
 
-### 3.6 Both the evaluator and the preview read `var()` fallbacks, not the resolved token
-
-`#8C8C8C` appears twice in the seeded light CSS:
-
-```
-line 12:  --Text-Disabled: #8C8C8C;              /* the design token — what ships */
-line 48:  color: var(--Text-Disabled, #8C8C8C);  /* the fallback — ignored by browsers */
-```
-
-**The app reads line 48. A browser reads line 12.**
-
-The contrast rule matches on the `var()` fallback, and `buildPreviewStateCss` in
-`LiveButtonPreview.tsx` does the same — `extractCssVarFallback` is tried first,
-and `extractCssTokenValue` only runs when no fallback is present. The resulting
-`.btn.btn--disabled { color: … }` is injected after the user CSS, so it wins the
-cascade.
-
-So the two halves **agree with each other**, and the demo behaves consistently:
-
-| Edit | Preview updates? | Score changes? |
-| --- | --- | --- |
-| Fallback, line 48 | **Yes, live** | **Yes → 100** |
-| `:root` token, line 12 | No | No |
-| Both | Yes | Yes |
-
-**The problem is fidelity to real CSS, not internal inconsistency.** A browser
-uses the `:root` value and ignores the fallback, so against production CSS the
-tool can be wrong in both directions:
-
-- A developer fixes the **design token** — the correct fix in their real product
-  — and OrchestratoR reports *still failing*, when in production it would pass.
-  **False negative.**
-- A developer edits only the **fallback** and OrchestratoR reports *fixed*, when
-  in production nothing changed. **False positive.**
-
-That undercuts the core claim: "this is what your code evaluates to."
-
-**The fix, and it must be done as one change:** resolve `:root` custom properties
-before evaluating, and treat the `var()` fallback as what it is — used only when
-the property is undefined. Apply it to **both** the evaluator and
-`buildPreviewStateCss`. Fixing only the evaluator would make the score respond to
-line 11 while the preview still responds to line 46, creating a real divergence
-where none exists today.
-
-Then point the annotation at **line 12**, since that is where a developer fixes
-it. The line-number gutter shipped in `f48e275` makes that visible — previously
-there was no way to tell which line a marker referred to.
-
-Related to 3.3 evaluator scope: the same custom-property resolution pass is a
-prerequisite for handling arbitrary pasted CSS.
-
-**Possible follow-on feature:** once resolution exists, a token and its fallback
-disagreeing (`--Text-Disabled: #8C8C8C` with a `#494949` fallback) is a
-contradictory design system worth flagging in its own right.
-
 ### 3.5 Interface Appearance toggle — approved, not yet built
 
 Let engineers theme the **application chrome** independently of the component
@@ -401,6 +346,109 @@ buttons.
 `--surface: #161b23` is **1.34:1**. Subtle borders are already the norm in the
 live app, so this is a standing question rather than a regression introduced by
 the light theme.
+
+### 3.6 Both the evaluator and the preview read `var()` fallbacks, not the resolved token
+
+`#8C8C8C` appears twice in the seeded light CSS:
+
+```
+line 12:  --Text-Disabled: #8C8C8C;              /* the design token — what ships */
+line 48:  color: var(--Text-Disabled, #8C8C8C);  /* the fallback — ignored by browsers */
+```
+
+**The app reads line 48. A browser reads line 12.**
+
+The contrast rule matches on the `var()` fallback, and `buildPreviewStateCss` in
+`LiveButtonPreview.tsx` does the same — `extractCssVarFallback` is tried first,
+and `extractCssTokenValue` only runs when no fallback is present. The resulting
+`.btn.btn--disabled { color: … }` is injected after the user CSS, so it wins the
+cascade.
+
+So the two halves **agree with each other**, and the demo behaves consistently:
+
+| Edit | Preview updates? | Score changes? |
+| --- | --- | --- |
+| Fallback, line 48 | **Yes, live** | **Yes → 100** |
+| `:root` token, line 12 | No | No |
+| Both | Yes | Yes |
+
+**The problem is fidelity to real CSS, not internal inconsistency.** A browser
+uses the `:root` value and ignores the fallback, so against production CSS the
+tool can be wrong in both directions:
+
+- A developer fixes the **design token** — the correct fix in their real product
+  — and OrchestratoR reports *still failing*, when in production it would pass.
+  **False negative.**
+- A developer edits only the **fallback** and OrchestratoR reports *fixed*, when
+  in production nothing changed. **False positive.**
+
+That undercuts the core claim: "this is what your code evaluates to."
+
+**The fix, and it must be done as one change:** resolve `:root` custom properties
+before evaluating, and treat the `var()` fallback as what it is — used only when
+the property is undefined. Apply it to **both** the evaluator and
+`buildPreviewStateCss`. Fixing only the evaluator would make the score respond to
+line 11 while the preview still responds to line 46, creating a real divergence
+where none exists today.
+
+Then point the annotation at **line 12**, since that is where a developer fixes
+it. The line-number gutter shipped in `f48e275` makes that visible — previously
+there was no way to tell which line a marker referred to.
+
+Related to 3.3 evaluator scope: the same custom-property resolution pass is a
+prerequisite for handling arbitrary pasted CSS.
+
+**Possible follow-on feature:** once resolution exists, a token and its fallback
+disagreeing (`--Text-Disabled: #8C8C8C` with a `#494949` fallback) is a
+contradictory design system worth flagging in its own right.
+
+---
+
+### 3.7 Unresolvable values score 100/100
+
+Found while testing whether the seeded CSS could simply drop its `var()`
+fallbacks. It cannot, and the reason is worse than the fallbacks:
+
+```
+with fallbacks, token #8C8C8C   → score  85   rule-5 Fail
+no fallbacks,   token #8C8C8C   → score 100   rule-5 Unknown, rule-6 Unknown
+no fallbacks,   token #494949   → score 100   rule-5 Unknown, rule-6 Unknown
+```
+
+Strip the inline hex and the evaluator cannot find a colour at all — it has no
+equivalent of `extractCssTokenValue`, so the contrast rules return `Unknown`
+rather than reading `:root`. Note rows two and three are identical: with the
+*correct* token value the result is the same as with the wrong one, because
+neither is being read.
+
+**`Unknown` is excluded from the score denominator** — the scoring policy states
+this explicitly — so:
+
+> 7 pass, 0 fail, 2 unknown → **100/100**
+
+The tool reports a perfect score for CSS it could not evaluate. And the shape
+that triggers it, `var(--Text-Disabled)` with no inline fallback, is **how real
+design systems are written** — inline hex fallbacks are the exception. So anyone
+pasting production CSS is a strong candidate for a flattering, meaningless 100
+with the contrast checks silently switched off.
+
+Worse than a wrong number, because it looks like a pass.
+
+**Two candidate fixes, not mutually exclusive:**
+
+1. **Resolve `:root` custom properties** so the values are readable in the first
+   place — this is 3.6, and it is the real fix.
+2. **Stop letting Unknowns yield a perfect score.** Either surface an explicit
+   "not fully evaluated" state instead of a number, or cap the score when a
+   high-severity rule could not be checked. A 100 that means "we could not tell"
+   is indistinguishable from a 100 that means "this is correct."
+
+**Priority:** above 3.5 (Appearance toggle). This is the finding most likely to
+embarrass the tool in front of someone who pastes their own CSS — which is
+exactly what a reviewer will do.
+
+**Also note:** the fallbacks in the seeded sample are load-bearing until 3.6
+lands. Do not remove them as a tidy-up.
 
 ---
 
