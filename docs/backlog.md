@@ -9,7 +9,11 @@ Last updated: 2026-08-04
 
 ---
 
-## 1. Blocking the demo launch
+## 1. Blocking the demo launch — COMPLETE 2026-08-04
+
+The demo is live at <https://demo.orchestratorlabs.ai>, on HTTPS with a Let's
+Encrypt certificate, linked from the README, and its link preview is verified and
+cached. Nothing in this section is outstanding.
 
 | # | Item | Owner | Status |
 | --- | --- | --- | --- |
@@ -19,7 +23,7 @@ Last updated: 2026-08-04
 | 1.4 | ~~Deploy to Vercel~~ | Craig | **Done 2026-08-04** — `orchestrator-chi-inky.vercel.app` |
 | 1.5 | ~~Add `demo.orchestratorlabs.ai` CNAME in Squarespace~~ | Craig | **Done 2026-08-04** — live on HTTPS, Let's Encrypt cert issued |
 | 1.6 | ~~Add the live demo link to the top of the README~~ | Claude | **Done 2026-08-04** |
-| 1.7 | Run LinkedIn Post Inspector on the live demo URL to prime the cache before announcing | Craig, after 1.5 | Open |
+| 1.7 | ~~Run LinkedIn Post Inspector on the live demo URL to prime the cache~~ | Craig | **Done 2026-08-04** — card, title and canonical URL all correct |
 
 **On 1.4 — no server is needed, and no domain either.** This was mistaken for a
 hosting purchase. It is not:
