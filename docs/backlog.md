@@ -16,9 +16,9 @@ Last updated: 2026-08-04
 | 1.1 | A11Y DoubleCheck / Ask OrchestratoR show an intentional "needs local service" message instead of a failure when hosted | Claude | **Done** — `9be7cd2` |
 | 1.2 | `index.html` metadata — title, description, Open Graph, favicons | Claude | **Done** — `71d30be` |
 | 1.3 | Embed workspace screenshots in the README | Claude | **Done** — `dabdbf2` |
-| 1.4 | **Deploy to Vercel** | Craig | Open — target week of 2026-08-03 |
-| 1.5 | Add `demo.orchestratorlabs.ai` CNAME in Squarespace | Craig | Open, after 1.4 |
-| 1.6 | Add the live demo link to the top of the README | Claude, after 1.4 | Open |
+| 1.4 | ~~Deploy to Vercel~~ | Craig | **Done 2026-08-04** — `orchestrator-chi-inky.vercel.app` |
+| 1.5 | ~~Add `demo.orchestratorlabs.ai` CNAME in Squarespace~~ | Craig | **Done 2026-08-04** — live on HTTPS, Let's Encrypt cert issued |
+| 1.6 | ~~Add the live demo link to the top of the README~~ | Claude | **Done 2026-08-04** |
 | 1.7 | Run LinkedIn Post Inspector on the live demo URL to prime the cache before announcing | Craig, after 1.5 | Open |
 
 **On 1.4 — no server is needed, and no domain either.** This was mistaken for a

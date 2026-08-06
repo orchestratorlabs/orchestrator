@@ -2,6 +2,18 @@
 
 **Your accessibility co-pilot — Detect. Fix. Ship.**
 
+### ▶ [Try the live demo](https://demo.orchestratorlabs.ai)
+
+No install, nothing to run. Load the sample component, run the check, and fix the
+failing rule in the editor to watch the score change.
+
+The hosted demo covers the deterministic half — all nine rules, the score, the
+line-linked findings and the live light/dark preview. The Claude-backed features
+need the local Python service and are not included; see
+[Running it locally](#running-it-locally).
+
+---
+
 OrchestratoR aligns teams across design, product, engineering, and compliance —
 detecting, fixing, and shipping accessible experiences faster.
 
@@ -106,9 +118,11 @@ npm run dev
 Then open the URL Vite prints, click **Load Component Code**, and run the
 evaluation.
 
-> **Without the backend running**, the workspace, rule engine, scoring, and live
-> preview all work. The three Claude-backed features — A11Y DoubleCheck, RAG
-> query, and echo — will fail, since they require the Flask service.
+> **Without the backend running**, the workspace, rule engine, scoring, line
+> annotations and live preview all work. The Claude-backed features do not error —
+> A11Y DoubleCheck renders as unavailable with an explanation, Ask OrchestratoR
+> states the same, and the Score Summary falls back to a summary derived from the
+> rule results and labelled as such.
 
 ## Documentation
 
@@ -119,7 +133,7 @@ wireframe specifications.
 
 The seeded sample scores **85 in light mode and 100 in dark mode**. That is not
 a bug: the light theme's disabled tokens (`--Text-Disabled: #8C8C8C` on
-`--Bg-Disabled: #BDBDBD`) sit at roughly 1.9:1, below the 4.5:1 threshold, so
+`--Bg-Disabled: #BDBDBD`) sit at roughly 1.79:1, below the 4.5:1 threshold, so
 the text-contrast rule correctly fails. The dark theme's equivalents pass.
 
 ---
