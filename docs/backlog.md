@@ -1,8 +1,9 @@
 # OrchestratoR™ — Backlog
 
 Running list of fixes, ideas, and decisions not yet acted on. Newest thinking at
-the top of each section. Companion to
-[vercel-demo-deploy-runbook.md](design/vercel-demo-deploy-runbook.md).
+the top of each section. Companion to the deployment runbook, which is kept local rather than published
+(`docs/design/vercel-demo-deploy-runbook.md`, gitignored — it contains hosting and
+DNS steps).
 
 Last updated: 2026-08-04
 
@@ -34,8 +35,7 @@ hosting purchase. It is not:
   CNAME record on a domain already owned, not a server.
 
 Order: deploy first, share the `*.vercel.app` URL if useful, then add the CNAME.
-See [`design/vercel-demo-deploy-runbook.md`](design/vercel-demo-deploy-runbook.md)
-§4 for the project setup. The one common blocker is granting Vercel access to the
+See §4 of the local deployment runbook for the project setup. The one common blocker is granting Vercel access to the
 **`orchestratorlabs` organisation**, or the repo will not appear in the import
 list.
 
