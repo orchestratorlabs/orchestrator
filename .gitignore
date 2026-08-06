@@ -150,3 +150,7 @@ venv/
 
 # Local design-source exports (not published)
 docs/visual-reference/figma-exports/
+
+# Deployment runbook — kept local, contains DNS/hosting steps
+docs/design/vercel-demo-deploy-runbook.md
+docs/design/vercel-demo-deploy-runbook.pdf
