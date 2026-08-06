@@ -296,11 +296,11 @@ interview anecdote, but only if the position is deliberate.
 `#8C8C8C` appears twice in the seeded light CSS:
 
 ```
-line 11:  --Text-Disabled: #8C8C8C;              /* the design token — what ships */
-line 46:  color: var(--Text-Disabled, #8C8C8C);  /* the fallback — ignored by browsers */
+line 12:  --Text-Disabled: #8C8C8C;              /* the design token — what ships */
+line 48:  color: var(--Text-Disabled, #8C8C8C);  /* the fallback — ignored by browsers */
 ```
 
-**The app reads line 46. A browser reads line 11.**
+**The app reads line 48. A browser reads line 12.**
 
 The contrast rule matches on the `var()` fallback, and `buildPreviewStateCss` in
 `LiveButtonPreview.tsx` does the same — `extractCssVarFallback` is tried first,
@@ -312,8 +312,8 @@ So the two halves **agree with each other**, and the demo behaves consistently:
 
 | Edit | Preview updates? | Score changes? |
 | --- | --- | --- |
-| Fallback, line 46 | **Yes, live** | **Yes → 100** |
-| `:root` token, line 11 | No | No |
+| Fallback, line 48 | **Yes, live** | **Yes → 100** |
+| `:root` token, line 12 | No | No |
 | Both | Yes | Yes |
 
 **The problem is fidelity to real CSS, not internal inconsistency.** A browser
@@ -335,7 +335,7 @@ the property is undefined. Apply it to **both** the evaluator and
 line 11 while the preview still responds to line 46, creating a real divergence
 where none exists today.
 
-Then point the annotation at **line 11**, since that is where a developer fixes
+Then point the annotation at **line 12**, since that is where a developer fixes
 it. The line-number gutter shipped in `f48e275` makes that visible — previously
 there was no way to tell which line a marker referred to.
 

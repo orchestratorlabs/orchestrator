@@ -49,6 +49,7 @@ export function Button({
 const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&display=swap");
 
 :root {
+  /* Design tokens — the values that ship. Change these to change the button. */
   --Corner-M: 0.5rem;
   --Bg-Brand: #0540AB;
   --Bg-Brand-Hover: #022D7F;
@@ -89,6 +90,7 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
   background: var(--Bg-Brand-Active, #011D53);
 }
 
+/* var(token, fallback): the fallback applies only if the token is undefined. */
 .btn:disabled {
   background: var(--Bg-Disabled, #BDBDBD);
   color: var(--Text-Disabled, #8C8C8C);
@@ -99,6 +101,7 @@ const SAMPLE_CSS = `@import url("https://fonts.googleapis.com/css2?family=Atkins
 const SAMPLE_CSS_DARK = `@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&display=swap");
 
 :root {
+  /* Design tokens — the values that ship. Change these to change the button. */
   --Corner-M: 0.5rem;
   --Bg-Brand: #8DB6FF;
   --Bg-Brand-Hover: #5E97FF;
@@ -139,6 +142,7 @@ const SAMPLE_CSS_DARK = `@import url("https://fonts.googleapis.com/css2?family=A
   background: var(--Bg-Brand-Active, #367BF9);
 }
 
+/* var(token, fallback): the fallback applies only if the token is undefined. */
 .btn:disabled {
   background: var(--Bg-Disabled, #D5D5D5);
   color: var(--Text-Disabled, #595959);
