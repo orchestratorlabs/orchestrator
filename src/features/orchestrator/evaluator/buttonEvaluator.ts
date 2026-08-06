@@ -387,7 +387,7 @@ export function evaluateButtonAccessibility(reactCode: string, rawCssCode: strin
               `Computed disabled-state text contrast ratio ${disabledRatio.toFixed(
                 2
               )}:1 (< 4.5:1) using ${disabledColorHex} text on ${disabledBackgroundHex} background.`,
-              "Adjust the disabled button label color or disabled background color to meet at least 4.5:1 contrast for normal text. Keep the design token and its var() fallback in sync — they should not disagree."
+              "Adjust the disabled button label color or disabled background color to meet at least 4.5:1 contrast for normal text. Change it at the source — the custom property this declaration resolves to, not the var() fallback."
             )
           );
         } else if (ratio >= 4.5) {

@@ -427,8 +427,7 @@ export function OrchestratorPanel({
               </p>
               {!claudeSummary && localScoreSummary && (
                 <p className="muted score-interpretation-note">
-                  Summarised locally from the rule results. The agentic double-check runs
-                  with the local Python service.
+                  Demo version — agentic double-check not included.
                 </p>
               )}
             </>
