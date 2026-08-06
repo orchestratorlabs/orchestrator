@@ -381,6 +381,13 @@ body {
   line-height: 20px;
   padding: 12px;
   resize: vertical;
+  /* No soft wrapping: the line numbers, issue markers and annotation overlay all
+     position by `logical line x 20px`, so a wrapped line would take two visual
+     rows and drift everything below it. Long lines scroll horizontally instead,
+     which is what a code editor should do. Paired with wrap="off" on the
+     textarea. */
+  white-space: pre;
+  overflow-x: auto;
 }
 
 .code-input.css {
@@ -389,9 +396,40 @@ body {
 
 .code-editor-shell {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr);
+  /* issue marker rail | line numbers | editor */
+  grid-template-columns: 12px 30px minmax(0, 1fr);
   gap: 8px;
   align-items: stretch;
+}
+
+/* Line-number rail. Numbers are absolutely positioned by line index and the
+   track is translated by the textarea's scrollTop, matching how the issue
+   markers and annotation overlay work. */
+.code-line-numbers {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.code-line-numbers-track {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.code-line-number {
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 20px;
+  line-height: 20px;
+  text-align: right;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.6;
+  user-select: none;
 }
 
 .code-issue-gutter {

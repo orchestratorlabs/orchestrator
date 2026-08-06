@@ -250,6 +250,33 @@ function midpointLine(range: LineRange): number {
   return Math.round((range.startLine + range.endLine) / 2);
 }
 
+/**
+ * Line-number rail for a code editor.
+ *
+ * Positions each number with the same `lineToPixel` used by the issue markers
+ * and the annotation overlay, and is translated by the textarea's own
+ * `scrollTop`, so all three stay locked together.
+ *
+ * This is only correct while one logical line occupies one visual row, which is
+ * why the editors set `wrap="off"`. With soft wrapping, a line longer than the
+ * editor takes two rows and everything below it drifts — the numbers, the
+ * markers and the highlight boxes alike.
+ */
+function CodeLineNumbers({ code, scrollTop }: { code: string; scrollTop: number }) {
+  const lineCount = Math.max(code.split("\n").length, 1);
+  return (
+    <div className="code-line-numbers" aria-hidden="true">
+      <div className="code-line-numbers-track" style={{ transform: `translateY(-${scrollTop}px)` }}>
+        {Array.from({ length: lineCount }, (_, index) => (
+          <span key={index + 1} className="code-line-number" style={{ top: `${lineToPixel(index + 1)}px` }}>
+            {index + 1}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function mapFindingToAnnotation(finding: RuleResult, reactCode: string, cssCode: string): CodeAnnotation {
   const fallbackTsxRange = firstRangeFromPatterns(
     reactCode,
@@ -741,6 +768,7 @@ export function WorkspacePane({
                 ))}
               </div>
             </div>
+            <CodeLineNumbers code={reactCode} scrollTop={tsxScrollTop} />
             <div className="code-input-wrap">
               <textarea
                 ref={tsxTextareaRef}
@@ -751,6 +779,7 @@ export function WorkspacePane({
                 onScroll={(event) => setTsxScrollTop(event.currentTarget.scrollTop)}
                 placeholder={SAMPLE_TSX}
                 spellCheck={false}
+                wrap="off"
               />
               <div className="code-issue-overlay" aria-hidden="true">
                 <div
@@ -804,6 +833,10 @@ export function WorkspacePane({
                 ))}
               </div>
             </div>
+            <CodeLineNumbers
+              code={previewTheme === "dark" ? SAMPLE_CSS_DARK : cssCode}
+              scrollTop={cssScrollTop}
+            />
             <div className="code-input-wrap">
               <textarea
                 ref={cssTextareaRef}
@@ -815,6 +848,7 @@ export function WorkspacePane({
                 onScroll={(event) => setCssScrollTop(event.currentTarget.scrollTop)}
                 placeholder={SAMPLE_CSS}
                 spellCheck={false}
+                wrap="off"
               />
               <div className="code-issue-overlay" aria-hidden="true">
                 <div
