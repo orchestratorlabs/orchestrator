@@ -1,5 +1,6 @@
 import { MVP_SCORING_POLICY, type EvaluationResult, type RuleResult } from "../types/evaluation";
 import { orderFindingsForMvp } from "../types/rules";
+import { resolveCssCustomProperties } from "../cssVariables";
 import {
   FALLBACK_SELECTOR,
   TARGET_DISABLED_MODIFIER,
@@ -201,7 +202,16 @@ function buildFixes(findings: RuleResult[]): string[] {
   return actionable;
 }
 
-export function evaluateButtonAccessibility(reactCode: string, cssCode: string): EvaluationResult {
+export function evaluateButtonAccessibility(reactCode: string, rawCssCode: string): EvaluationResult {
+  // Substitute custom properties before any rule inspects the CSS, so colours are
+  // read the way a browser resolves them: the declared token wins, and a var()
+  // fallback applies only when the token is undefined. Without this, a declaration
+  // like `color: var(--Text-Disabled, #8C8C8C)` was scanned for a literal hex and
+  // matched the fallback — so editing the design token changed nothing.
+  //
+  // Selectors are untouched, so every existing block-matching rule is unaffected.
+  const cssCode = resolveCssCustomProperties(rawCssCode);
+
   const findings: RuleResult[] = [];
   const buttonTagMatch = reactCode.match(/<button\b[\s\S]*?>[\s\S]*?<\/button>/m);
   const buttonMarkup = buttonTagMatch?.[0] ?? "";

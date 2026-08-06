@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { resolveCssCustomProperties } from "../orchestrator/cssVariables";
+import { TARGET_SELECTOR } from "../orchestrator/evaluator/targetSelector";
 
 export type ButtonPreviewState = "default" | "hover" | "active" | "disabled" | "focused";
 
@@ -64,32 +66,24 @@ const PREVIEW_SHELL_CSS = `
 `;
 
 /* Inserted after user CSS so these modifier classes always win the cascade. */
-function extractCssTokenValue(cssCode: string, tokenName: string, fallback: string): string {
-  const escapedToken = tokenName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = cssCode.match(new RegExp(`${escapedToken}\\s*:\\s*(#[0-9a-fA-F]{3,8})\\s*;`));
-
-  return match?.[1] ?? fallback;
-}
-
-function extractCssVarFallback(cssCode: string, propertyName: string, tokenName: string): string | null {
-  const escapedProperty = propertyName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const escapedToken = tokenName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-  const match = cssCode.match(
-    new RegExp(`${escapedProperty}\\s*:\\s*var\\(${escapedToken}\\s*,\\s*(#[0-9a-fA-F]{3,8})\\s*\\)\\s*;`)
+/**
+ * Reads a colour from the disabled rule *after* custom-property resolution, so
+ * the preview shows the value a browser would use — the declared token, not the
+ * `var()` fallback. This has to resolve the same way the evaluator does, or the
+ * rendered button and the score would disagree.
+ */
+function extractDisabledColor(resolvedCss: string, propertyName: string, fallback: string): string {
+  const block = resolvedCss.match(
+    new RegExp(`${TARGET_SELECTOR.replace(".", "\\.")}:disabled\\s*\\{([\\s\\S]*?)\\}`, "m")
   );
-
-  return match?.[1] ?? null;
+  const hex = block?.[1].match(new RegExp(`${propertyName}\\s*:\\s*(#[0-9a-fA-F]{3,8})`));
+  return hex?.[1] ?? fallback;
 }
 
 function buildPreviewStateCss(cssCode: string): string {
-  const disabledBackground =
-    extractCssVarFallback(cssCode, "background", "--Bg-Disabled") ??
-    extractCssTokenValue(cssCode, "--Bg-Disabled", "#BDBDBD");
-
-  const disabledText =
-    extractCssVarFallback(cssCode, "color", "--Text-Disabled") ??
-    extractCssTokenValue(cssCode, "--Text-Disabled", "#494949");
+  const resolvedCss = resolveCssCustomProperties(cssCode);
+  const disabledBackground = extractDisabledColor(resolvedCss, "background", "#BDBDBD");
+  const disabledText = extractDisabledColor(resolvedCss, "color", "#494949");
 
   return `
 .btn.btn--default {

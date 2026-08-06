@@ -7,6 +7,7 @@ import {
   cssBlockPattern,
   cssSelectorOpenPattern
 } from "../orchestrator/evaluator/targetSelector";
+import { tokenNameForDeclaration } from "../orchestrator/cssVariables";
 import { LiveButtonPreview, type ButtonPreviewState } from "./LiveButtonPreview";
 
 /**
@@ -255,6 +256,32 @@ function midpointLine(range: LineRange): number {
 }
 
 /**
+ * Single-line range of the custom-property declaration that `propertyName` inside
+ * `blockRange` depends on — e.g. the `--Text-Disabled: …;` line in `:root` for a
+ * block whose `color` reads `var(--Text-Disabled, …)`.
+ *
+ * Used to send a finding to the line that actually changes the rendered value.
+ * Returns null when the declaration does not use a token, or the token is not
+ * declared anywhere, in which case callers keep their existing behaviour.
+ */
+function tokenDeclarationRange(
+  cssCode: string,
+  blockRange: LineRange | null,
+  propertyName: string
+): LineRange | null {
+  if (!blockRange) {
+    return null;
+  }
+  const blockText = cssCode.split("\n").slice(blockRange.startLine - 1, blockRange.endLine).join("\n");
+  const tokenName = tokenNameForDeclaration(blockText, propertyName);
+  if (!tokenName) {
+    return null;
+  }
+  const escaped = tokenName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return rangeFromPattern(cssCode, new RegExp(`${escaped}\\s*:\\s*[^;]+;`, "m"));
+}
+
+/**
  * Line-number rail for a code editor.
  *
  * Positions each number with the same `lineToPixel` used by the issue markers
@@ -372,21 +399,31 @@ function mapFindingToAnnotation(finding: RuleResult, reactCode: string, cssCode:
 case "rule-5-text-contrast": {
   const isDisabledTextContrast = finding.evidence.includes("disabled-state");
 
+  // Point at the design token rather than the `var()` usage. The token is the
+  // value a browser resolves and therefore the line a developer edits; the
+  // fallback beside the usage is dead unless the token is undefined. The token
+  // name is derived from the failing declaration, so this is not tied to the
+  // seeded sample's naming.
+  const disabledTokenRange = isDisabledTextContrast
+    ? tokenDeclarationRange(cssCode, disabledRange, "color")
+    : null;
+
   const targetRange =
-    isDisabledTextContrast && disabledRange
-      ? disabledRange
-      : cssBaseBlockRange;
+    disabledTokenRange ??
+    (isDisabledTextContrast && disabledRange ? disabledRange : cssBaseBlockRange);
 
   return {
     id: finding.ruleId,
     ...targetRange,
-    focusLine: firstMatchingLineFromPatterns(
-      cssCode,
-      isDisabledTextContrast
-        ? [/color\s*:\s*var\(--Text-Disabled/, /color\s*:/]
-        : [/color\s*:/, /background(?:-color)?\s*:/, TARGET_OPEN],
-      midpointLine(targetRange)
-    ),
+    focusLine: disabledTokenRange
+      ? disabledTokenRange.startLine
+      : firstMatchingLineFromPatterns(
+          cssCode,
+          isDisabledTextContrast
+            ? [/color\s*:/]
+            : [/color\s*:/, /background(?:-color)?\s*:/, TARGET_OPEN],
+          midpointLine(targetRange)
+        ),
     label: finding.ruleName,
     status,
     target: "css"
