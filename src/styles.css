@@ -57,6 +57,26 @@ body {
   cursor: pointer;
 }
 
+/* Profile control: avatar plus label as one button. */
+.top-bar-btn--profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Stroked so it reads as an outline at small sizes, and drawn in currentColor so
+   it follows the button's text colour instead of needing separate theming. */
+.top-bar-avatar {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .orchestrator-btn {
   border: 1px solid #7296e1;
   border-radius: 8px;
