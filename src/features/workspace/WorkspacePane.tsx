@@ -165,6 +165,8 @@ interface WorkspacePaneProps {
   onLoadSample: () => void;
   onEvaluate: () => void;
   onPreviewThemeChange: (theme: "light" | "dark") => void;
+  /** Whether the OrchestratoR panel is open, so the toggle can label and announce its state. */
+  isPanelOpen: boolean;
   onTogglePanel: () => void;
   onA11yDoubleCheck: () => void;
   isDoubleChecking: boolean;
@@ -562,6 +564,7 @@ export function WorkspacePane({
   onLoadSample,
   onEvaluate,
   onPreviewThemeChange,
+  isPanelOpen,
   onTogglePanel,
   onA11yDoubleCheck,
   isDoubleChecking,
@@ -633,9 +636,11 @@ export function WorkspacePane({
                 type="button"
                 className="workspace-action-btn orchestrator-btn"
                 aria-describedby="orchestrator-btn-tooltip"
+                aria-expanded={isPanelOpen}
+                aria-controls="orchestrator-panel"
                 onClick={onTogglePanel}
               >
-                Open OrchestratoR
+                {isPanelOpen ? "Close OrchestratoR" : "Open OrchestratoR"}
               </button>
               <span
                 id="orchestrator-btn-tooltip"
@@ -646,8 +651,14 @@ export function WorkspacePane({
               </span>
             </div>
           ) : (
-            <button type="button" className="workspace-action-btn orchestrator-btn" onClick={onTogglePanel}>
-              Open OrchestratoR
+            <button
+              type="button"
+              className="workspace-action-btn orchestrator-btn"
+              aria-expanded={isPanelOpen}
+              aria-controls="orchestrator-panel"
+              onClick={onTogglePanel}
+            >
+              {isPanelOpen ? "Close OrchestratoR" : "Open OrchestratoR"}
             </button>
           )}
           <button

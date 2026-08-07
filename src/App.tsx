@@ -273,6 +273,7 @@ export function App() {
           onEvaluate={handleEvaluate}
           previewTheme={previewTheme}
           onPreviewThemeChange={handlePreviewThemeChange}
+          isPanelOpen={isPanelOpen}
           onTogglePanel={togglePanel}
           onA11yDoubleCheck={handleA11yDoubleCheck}
           isDoubleChecking={isDoubleChecking}

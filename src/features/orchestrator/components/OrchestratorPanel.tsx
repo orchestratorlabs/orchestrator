@@ -170,7 +170,11 @@ export function OrchestratorPanel({
     }
   };
   return (
-    <aside className={`orchestrator-panel ${isOpen ? "open" : "closed"}`} aria-hidden={!isOpen}>
+    <aside
+      id="orchestrator-panel"
+      className={`orchestrator-panel ${isOpen ? "open" : "closed"}`}
+      aria-hidden={!isOpen}
+    >
       <div className="panel-header">
         <img src={orchestratorLogo} alt="" className="panel-logo" aria-hidden="true" />
         <div className="panel-brand-copy">
