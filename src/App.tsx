@@ -294,6 +294,12 @@ export function App() {
           isClaudeSummaryLoading={isClaudeSummaryLoading}
         />
       </main>
+      <footer className="app-footer">
+        <p>
+          All contents, designs &amp; strategies are the proprietary materials of Craig
+          Maher Portfolio © 2026. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }
