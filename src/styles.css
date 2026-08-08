@@ -7,9 +7,6 @@
   --text: #e7ebf3;
   --muted: #9aa6ba;
   --accent: #4f8cff;
-  /* Declared once: .main-layout subtracts it so the footer never overlaps
-     the panels or forces the page to scroll. */
-  --footer-h: 32px;
 }
 
 * {
@@ -25,6 +22,8 @@ body {
 
 .app-root {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .top-bar {
@@ -103,7 +102,11 @@ body {
 }
 
 .main-layout {
-  height: calc(100vh - 56px - var(--footer-h));
+  /* Takes whatever the top bar and footer leave. Previously a
+     `calc(100vh - …)` of both heights, which broke as soon as the footer wrapped
+     to two lines. min-height:0 lets the grid children scroll. */
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) 0;
   transition: grid-template-columns 0.15s ease;
@@ -1410,19 +1413,50 @@ body {
 /* Proprietary notice. Uses --muted, which is 7.67:1 on --bg, so it stays legible
    at this size rather than being decoratively faint. */
 .app-footer {
-  height: var(--footer-h);
+  flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  padding: 0 16px;
+  gap: 4px 12px;
+  padding: 8px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
 
-.app-footer p {
+/* Uses --muted, 7.67:1 on --bg, so it stays legible at this size rather than
+   being decoratively faint. */
+.app-footer__notice {
   margin: 0;
   font-size: 12px;
   line-height: 1.3;
   color: var(--muted);
   text-align: center;
+}
+
+.app-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+.app-footer__links a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.app-footer__links a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.app-footer__links a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
 }

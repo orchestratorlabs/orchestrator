@@ -295,10 +295,36 @@ export function App() {
         />
       </main>
       <footer className="app-footer">
-        <p>
+        <p className="app-footer__notice">
           All contents, designs &amp; strategies are the proprietary materials of Craig
           Maher and orchestratorlabs © 2026. All rights reserved.
         </p>
+        {/*
+          Separators are their own aria-hidden spans rather than CSS ::before
+          content, which some screen readers announce as part of the link name.
+          Links are underlined at rest so they are not signalled by colour alone.
+        */}
+        <nav className="app-footer__links" aria-label="About OrchestratoR">
+          <a href="https://craigmaherportfolio.com/case-studies/" target="_blank" rel="noopener noreferrer">
+            Case study
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href="https://github.com/orchestratorlabs/orchestrator" target="_blank" rel="noopener noreferrer">
+            Source
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href="https://craigmaherportfolio.com/contact" target="_blank" rel="noopener noreferrer">
+            Contact
+          </a>
+          <span aria-hidden="true">·</span>
+          <a
+            href="https://github.com/orchestratorlabs/orchestrator/blob/main/LICENSE"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Licence
+          </a>
+        </nav>
       </footer>
     </div>
   );
