@@ -5,7 +5,7 @@ the top of each section. Companion to the deployment runbook, which is kept loca
 (`docs/design/vercel-demo-deploy-runbook.md`, gitignored — it contains hosting and
 DNS steps).
 
-Last updated: 2026-08-04
+Last updated: 2026-08-11
 
 ---
 
