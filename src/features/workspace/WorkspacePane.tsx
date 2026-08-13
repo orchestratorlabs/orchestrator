@@ -617,6 +617,9 @@ export function WorkspacePane({
     }
   }, [selectedAnnotation]);
 
+  const hasFailingFindings =
+    evaluationResult?.findings.some((finding) => finding.status === "Fail") ?? false;
+
   return (
     <section className="workspace">
       <div className="workspace-tabs">
@@ -669,7 +672,7 @@ export function WorkspacePane({
           >
             {isEvaluating ? "Evaluating..." : "Run Accessibility Check"}
           </button>
-          {evaluationResult !== null && isBackendReachable ? (
+          {evaluationResult !== null && isBackendReachable && !hasFailingFindings ? (
             <>
               <button
                 type="button"
@@ -717,6 +720,8 @@ export function WorkspacePane({
               >
                 {evaluationResult === null
                   ? "Run A11Y DoubleCheck after the Accessibility Check."
+                  : hasFailingFindings
+                  ? "Fix the failing finding(s) and re-run the Accessibility Check before running A11Y DoubleCheck."
                   : "A11Y DoubleCheck requires the local Python service and is not available in this hosted demo."}
               </span>
             </div>

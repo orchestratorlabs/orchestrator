@@ -100,9 +100,13 @@ export function App() {
   setEvaluationResult(null);
   setLightResult(null);
   setDarkResult(null);
+  setEvaluatedMode(null);
   setEvaluationSignature(null);
   setClaudeSummary(null);
   setIsClaudeSummaryLoading(false);
+  setA11yDoubleCheckResult(null);
+  setA11yDoubleCheckError(null);
+  setDoubleCheckEvaluationSignature(null);
   setEvaluationStateMessage(
     "Component code loaded. Select a button state and run the accessibility check."
   );
