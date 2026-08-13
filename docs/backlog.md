@@ -5,7 +5,7 @@ the top of each section. Companion to the deployment runbook, which is kept loca
 (`docs/design/vercel-demo-deploy-runbook.md`, gitignored — it contains hosting and
 DNS steps).
 
-Last updated: 2026-08-11
+Last updated: 2026-08-13
 
 ---
 
@@ -256,6 +256,33 @@ Claude):
 ---
 
 ## 3. Engineering quality
+
+### 3.0 Shipped 2026-08-13 — rail scroll, exportable report, DoubleCheck gating, Clear Code
+
+- **Co-pilot rail scroll fix.** `.app-root` used `min-height: 100vh` instead of
+  `height: 100vh`, so the flex column grew past the viewport and the whole
+  browser window scrolled instead of the panel's own `overflow: auto`
+  container. `78c4f0c`.
+- **Export Accessibility Report.** New button below the "Component approved"
+  banner downloads a markdown report with both light and dark theme scores,
+  findings, and recommended fixes. Required caching evaluation results per
+  theme (`lightResult`/`darkResult` in `App.tsx`) instead of discarding the
+  other theme's result on switch. `abb496c`.
+- **A11Y DoubleCheck gated on a clean check.** Previously clickable even with
+  a Fail finding present. Now disabled, with an explanatory tooltip, until the
+  Accessibility Check has zero Fail findings — Unknown findings don't block it,
+  matching the existing scoring policy. Loading a new component also now fully
+  resets A11Y state; it previously left a stale "Needs Re-run" card and an
+  orphaned "Evaluated: ..." label from the prior component. `31df8d2`.
+- **Clear Code button.** Sits next to the "Live Component Preview" title;
+  empties both editors and resets all evaluation state without reloading the
+  sample — for pasting custom code and starting clean. Also fixed a
+  pre-existing layout bug where the "Button state" dropdown was absolutely
+  centered over the whole preview header and could overlap neighbouring
+  controls. `e84b346`.
+
+All four commits are pushed to `origin/main` and live on
+`demo.orchestratorlabs.ai` via Vercel auto-deploy.
 
 ### 3.1 No test suite — the gap that keeps this a POC
 

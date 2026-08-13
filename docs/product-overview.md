@@ -2,10 +2,10 @@
 
 **Overview statement (for reading aloud):**
 
-> Currently, I'm building and architecting out OrchestratoR, a new and
-> exciting AI accessibility copilot that lets product teams evaluate React
-> component code for WCAG compliance, generate an accessibility health score,
-> surface code-level findings and fixes, and use an agentic second-pass
+> Currently, I'm building and architecting OrchestratoR, a new and exciting AI
+> accessibility copilot that lets product teams evaluate React component code
+> for WCAG compliance, generate an accessibility health score, surface
+> code-level findings and fixes, and also uses an agentic second-pass
 > validation to verify results before release.
 
 Currently a proof of concept scoped to buttons. This document separates what's
