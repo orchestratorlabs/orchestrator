@@ -91,22 +91,35 @@ export function App() {
     }
   };
 
+  const resetEvaluationState = () => {
+    setSelectedFindingRuleId(null);
+    setEvaluationResult(null);
+    setLightResult(null);
+    setDarkResult(null);
+    setEvaluatedMode(null);
+    setEvaluationSignature(null);
+    setClaudeSummary(null);
+    setIsClaudeSummaryLoading(false);
+    setA11yDoubleCheckResult(null);
+    setA11yDoubleCheckError(null);
+    setDoubleCheckEvaluationSignature(null);
+  };
+
+  const handleClearCode = () => {
+    setReactCode("");
+    setCssCode("");
+    setHasLoadedComponentCode(false);
+    setLoadedComponentName(null);
+    resetEvaluationState();
+    setEvaluationStateMessage("Load component code to begin.");
+  };
+
   const handleLoadSample = async () => {
   setReactCode(SAMPLE_BUTTON_TSX);
   setCssCode(SAMPLE_BUTTON_CSS);
   setHasLoadedComponentCode(true);
   setLoadedComponentName("Button");
-  setSelectedFindingRuleId(null);
-  setEvaluationResult(null);
-  setLightResult(null);
-  setDarkResult(null);
-  setEvaluatedMode(null);
-  setEvaluationSignature(null);
-  setClaudeSummary(null);
-  setIsClaudeSummaryLoading(false);
-  setA11yDoubleCheckResult(null);
-  setA11yDoubleCheckError(null);
-  setDoubleCheckEvaluationSignature(null);
+  resetEvaluationState();
   setEvaluationStateMessage(
     "Component code loaded. Select a button state and run the accessibility check."
   );
@@ -283,6 +296,7 @@ export function App() {
           onCssCodeChange={setCssCode}
           loadedComponentName={loadedComponentName}
           onLoadSample={handleLoadSample}
+          onClearCode={handleClearCode}
           onEvaluate={handleEvaluate}
           previewTheme={previewTheme}
           onPreviewThemeChange={handlePreviewThemeChange}

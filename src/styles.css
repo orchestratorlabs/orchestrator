@@ -321,9 +321,9 @@ body {
 }
 
 .component-state-switcher {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex: 1;
+  display: flex;
+  justify-content: center;
 }
 
 .preview-title {
@@ -331,6 +331,14 @@ body {
   color: #E6E6E6;
   font-size: 16px;
   font-weight: 500;
+}
+
+.clear-code-btn {
+  flex: 0 0 auto;
+  width: auto;
+  margin-left: 16px;
+  padding: 6px 14px;
+  font-size: 12px;
 }
 
 .preview-state-control {

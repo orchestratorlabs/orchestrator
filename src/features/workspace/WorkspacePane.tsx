@@ -163,6 +163,7 @@ interface WorkspacePaneProps {
   onReactCodeChange: (value: string) => void;
   onCssCodeChange: (value: string) => void;
   onLoadSample: () => void;
+  onClearCode: () => void;
   onEvaluate: () => void;
   onPreviewThemeChange: (theme: "light" | "dark") => void;
   /** Whether the OrchestratoR panel is open, so the toggle can label and announce its state. */
@@ -562,6 +563,7 @@ export function WorkspacePane({
   onReactCodeChange,
   onCssCodeChange,
   onLoadSample,
+  onClearCode,
   onEvaluate,
   onPreviewThemeChange,
   isPanelOpen,
@@ -739,6 +741,15 @@ export function WorkspacePane({
           <p className="preview-title">
             Live Component Preview: {loadedComponentName ?? "No component loaded"}
           </p>
+          {hasLoadedComponentCode && (
+            <button
+              type="button"
+              className="a11y-doublecheck-btn clear-code-btn"
+              onClick={onClearCode}
+            >
+              Clear Code
+            </button>
+          )}
           {hasLoadedComponentCode && loadedComponentName && hasComponentStates && (
             <div className="component-state-switcher">
               <div className="preview-state-control">
