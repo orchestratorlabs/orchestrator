@@ -63,6 +63,8 @@ export function App() {
     "Load component code to begin."
   );
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
+  const [lightResult, setLightResult] = useState<EvaluationResult | null>(null);
+  const [darkResult, setDarkResult] = useState<EvaluationResult | null>(null);
   const [selectedFindingRuleId, setSelectedFindingRuleId] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
   const [evaluatedMode, setEvaluatedMode] = useState<"light" | "dark" | null>(null);
@@ -96,6 +98,8 @@ export function App() {
   setLoadedComponentName("Button");
   setSelectedFindingRuleId(null);
   setEvaluationResult(null);
+  setLightResult(null);
+  setDarkResult(null);
   setEvaluationSignature(null);
   setClaudeSummary(null);
   setIsClaudeSummaryLoading(false);
@@ -154,6 +158,11 @@ export function App() {
   const scoreValue = result.healthScore;
 
   setEvaluationResult(result);
+  if (currentMode === "dark") {
+    setDarkResult(result);
+  } else {
+    setLightResult(result);
+  }
   setEvaluatedMode(currentMode);
   setEvaluationSignature(newSignature);
   setEvaluationStateMessage(
@@ -284,6 +293,9 @@ export function App() {
           isOpen={isPanelOpen}
           evaluationStateMessage={evaluationStateMessage}
           evaluationResult={evaluationResult}
+          lightResult={lightResult}
+          darkResult={darkResult}
+          loadedComponentName={loadedComponentName}
           selectedFindingRuleId={selectedFindingRuleId}
           onSelectFinding={setSelectedFindingRuleId}
           evaluatedMode={evaluatedMode}
