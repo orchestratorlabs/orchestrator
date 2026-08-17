@@ -336,6 +336,11 @@ interview anecdote, but only if the position is deliberate.
 - All selector strings are centralised in
   `src/features/orchestrator/evaluator/targetSelector.ts` — change the class name
   there and only there.
+- **Idea (2026-08-17):** a find-in-editor search input next to each code canvas
+  box. Not needed at the current sample length (~50 lines), but real
+  component/CSS files run far longer, and at that length find-in-editor becomes
+  genuinely useful rather than a nice-to-have. Tied to arbitrary/larger pasted
+  code being supported, above.
 
 ### 3.4 Smaller cleanups
 
