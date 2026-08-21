@@ -238,6 +238,20 @@ GitHub's documented spec is 1280×640 (2:1), which is why
 `public/github-social-preview.png` exists separately from `public/og-image.png`
 (1200×630, matching the dimensions declared in the `index.html` Open Graph tags).
 
+**2026-08-21 — `github-social-preview-v2.png` drafted, not yet wired in.**
+Body copy reworded from "Evaluates button components... agentic double-check"
+to "Evaluates UI components against WCAG rules with live light/dark previews,
+deterministic scoring, and agentic validation" — matches current product
+wording (buttons-only scope stated separately, not in the headline copy).
+Logo, wordmark, tagline and gradient bar are pixel-identical to the original;
+only the body-copy region was redrawn (Helvetica Neue, matched size/colour).
+Committed locally (`4b7a41f`), **not pushed**, **not yet uploaded** to the
+GitHub repo social preview setting, and the "About" text below (still saying
+"buttons") has not been updated to match. Decide: replace
+`github-social-preview.png` with this version, update the About text to match,
+then re-verify via LinkedIn Post Inspector per the 2.1 gotcha above. `og-image.png`
+(the demo site's own card) has not been touched and still says "button components".
+
 **Settled 2026-08-04 — the About text.** GitHub composes the social title as
 `GitHub - orchestratorlabs/orchestrator: ` plus the About field, and LinkedIn
 truncates at roughly 100 characters — so the 40-character prefix leaves only ~60
