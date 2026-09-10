@@ -21,6 +21,54 @@ const RECOMMENDED_DISABLED_TEXT = "#494949";
 const SAMPLE_DISABLED_TEXT = "#8C8C8C";
 const SAMPLE_DISABLED_BG = "#BDBDBD";
 
+export interface NeedsVerificationItem {
+  ruleId: string;
+  ruleName: string;
+  detail: string;
+}
+
+/**
+ * Derives the Score Summary's "Needs Verification" list: one entry per Unknown
+ * finding — a rule the evaluator could not decide because the submitted
+ * component did not carry the evidence it needs (e.g. no `:focus-visible` block,
+ * so focus visibility, focus-indicator contrast and state coverage all return
+ * Unknown).
+ *
+ * Derived straight from the findings the evaluator already produced, so it:
+ *   - is independent of whether the prose summary came from Claude or the local
+ *     fallback — the section appears either way when evidence is missing;
+ *   - changes no evaluation or scoring logic — it only re-presents existing
+ *     Unknown results;
+ *   - never implies a WCAG failure. An Unknown is a missing-evidence gap.
+ *
+ * Returns an empty array when there are no Unknown findings, so the caller shows
+ * the section only when it has something to say.
+ */
+/**
+ * Shorter, plain-language wording for specific rules in the Needs Verification
+ * list, where the raw evidence + recommendation reads too long. Presentation
+ * only — the underlying finding (and the Findings list) is untouched.
+ */
+const NEEDS_VERIFICATION_DETAIL_OVERRIDES: Record<string, string> = {
+  "rule-9-state-coverage":
+    "Focus state cannot be verified from the submitted CSS. Restore or verify the focus-state definition.",
+};
+
+export function buildNeedsVerification(findings: RuleResult[]): NeedsVerificationItem[] {
+  return findings
+    .filter((f) => f.status === "Unknown")
+    .map((f) => ({
+      ruleId: f.ruleId,
+      ruleName: f.ruleName,
+      detail:
+        NEEDS_VERIFICATION_DETAIL_OVERRIDES[f.ruleId] ??
+        [f.evidence, f.recommendation]
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .join(" "),
+    }));
+}
+
 export function buildLocalScoreSummary(
   findings: RuleResult[],
   evaluatedMode: "light" | "dark" | null

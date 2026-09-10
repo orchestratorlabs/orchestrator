@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import type { A11yDoubleCheckResult, EvaluationResult } from "../types/evaluation";
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
 import { BACKEND_ORIGIN, IS_BACKEND_REACHABLE } from "../backend";
-import { buildLocalScoreSummary } from "../localScoreSummary";
+import { buildLocalScoreSummary, buildNeedsVerification } from "../localScoreSummary";
 
 interface OrchestratorPanelProps {
   isOpen: boolean;
@@ -19,6 +19,26 @@ interface OrchestratorPanelProps {
   doubleCheckEvaluationSignature: string | null;
   claudeSummary: string | null;
   isClaudeSummaryLoading: boolean;
+}
+
+/**
+ * Section heading inside the Score Summary, prefixed with the same colour-coded
+ * status dot used in the Health Score legend and the Findings list. The text
+ * label is always rendered, so the status is never conveyed by colour alone.
+ */
+function ScoreSummaryHeading({
+  status,
+  label,
+}: {
+  status: "pass" | "unknown" | "fail";
+  label: string;
+}) {
+  return (
+    <p className="score-summary-section-label">
+      <span className={`status-dot ${status}`} aria-hidden="true" />
+      {label}
+    </p>
+  );
 }
 
 const STATUS_LABEL: Record<A11yDoubleCheckResult["status"], string> = {
@@ -70,6 +90,17 @@ export function OrchestratorPanel({
         ? buildLocalScoreSummary(evaluationResult.findings, evaluatedMode)
         : null,
     [evaluationResult, claudeSummary, isClaudeSummaryLoading, evaluatedMode]
+  );
+
+  /**
+   * The Score Summary's "Needs Verification" section. Populated only when the
+   * evaluator returned Unknown findings — i.e. the submitted component lacked the
+   * evidence to check a rule. Kept distinct from the Fail prose above it and
+   * derived from the same findings regardless of the prose's source.
+   */
+  const needsVerification = useMemo(
+    () => (evaluationResult ? buildNeedsVerification(evaluationResult.findings) : []),
+    [evaluationResult]
   );
 
   const isDoubleCheckStale =
@@ -481,7 +512,8 @@ export function OrchestratorPanel({
         )}
       </section>
 
-      {evaluationResult && (isClaudeSummaryLoading || claudeSummary || localScoreSummary) && (
+      {evaluationResult &&
+        (isClaudeSummaryLoading || claudeSummary || localScoreSummary || needsVerification.length > 0) && (
         <section className="panel-card">
           <div className="score-interp-heading">
             <h3>Score Summary</h3>
@@ -518,9 +550,31 @@ export function OrchestratorPanel({
             </p>
           ) : (
             <>
-              <p className="muted score-interpretation-body">
-                {renderWithCopyableHex(claudeSummary ?? localScoreSummary ?? "")}
-              </p>
+              {(claudeSummary || localScoreSummary) && (
+                <>
+                  {failCount > 0 && (
+                    <ScoreSummaryHeading status="fail" label="Fail" />
+                  )}
+                  {failCount === 0 && unknownCount === 0 && (
+                    <ScoreSummaryHeading status="pass" label="Pass" />
+                  )}
+                  <p className="muted score-interpretation-body">
+                    {renderWithCopyableHex(claudeSummary ?? localScoreSummary ?? "")}
+                  </p>
+                </>
+              )}
+              {needsVerification.length > 0 && (
+                <div className="needs-verification">
+                  <ScoreSummaryHeading status="unknown" label="Unknown: Needs Verification" />
+                  <ul className="needs-verification-list">
+                    {needsVerification.map((item) => (
+                      <li key={item.ruleId}>
+                        <strong>{item.ruleName}</strong> — {item.detail}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {!claudeSummary && localScoreSummary && (
                 <p className="muted score-interpretation-note">
                   Demo version — agentic double-check not included.

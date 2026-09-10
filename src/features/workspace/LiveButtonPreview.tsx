@@ -1,12 +1,47 @@
 import { useLayoutEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { resolveCssCustomProperties } from "../orchestrator/cssVariables";
-import { TARGET_SELECTOR } from "../orchestrator/evaluator/targetSelector";
+import {
+  FALLBACK_SELECTOR,
+  TARGET_SELECTOR,
+  escapeForRegExp,
+} from "../orchestrator/evaluator/targetSelector";
 
 export type ButtonPreviewState = "default" | "hover" | "active" | "disabled" | "focused";
 
 function scopePreviewCss(css: string): string {
   return css.replace(/:root\b/g, ":host");
+}
+
+function matchFocusVisibleBlock(css: string, selector: string): string | null {
+  const match = css.match(
+    new RegExp(`${escapeForRegExp(`${selector}:focus-visible`)}\\s*\\{([\\s\\S]*?)\\}`, "m")
+  );
+  return match ? match[1] : null;
+}
+
+/**
+ * True only when the submitted CSS carries a `:focus-visible` rule with a real
+ * indicator property — mirroring the evaluator's Rule 4 "Pass" condition. When
+ * this is false the evaluator returns Unknown for Focus Visibility, so the
+ * preview must not draw a focus ring the submitted code does not define.
+ *
+ * Intentionally a read-only check: it inspects CSS, changes no scoring, findings,
+ * or evaluation behaviour, and is used purely to keep the Focused-state preview
+ * and its helper message honest.
+ */
+export function hasVerifiableFocusVisible(cssCode: string): boolean {
+  const resolved = resolveCssCustomProperties(cssCode);
+  const block =
+    matchFocusVisibleBlock(resolved, TARGET_SELECTOR) ??
+    matchFocusVisibleBlock(resolved, FALLBACK_SELECTOR);
+  if (!block) {
+    return false;
+  }
+  if (/outline\s*:\s*none/.test(block)) {
+    return false;
+  }
+  return /outline|box-shadow|border/.test(block);
 }
 
 const PREVIEW_SHELL_CSS = `
@@ -63,6 +98,33 @@ const PREVIEW_SHELL_CSS = `
   line-height: inherit;
   color: inherit;
 }
+.preview-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+/* Absolutely positioned so it never adds to the stack's height — the button
+   keeps the exact vertical position it has in every other preview state. */
+.preview-focus-warning {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin: 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: #5A5A5A;
+}
+.preview-focus-warning__icon {
+  font-size: 12px;
+  line-height: 1;
+}
 `;
 
 /* Inserted after user CSS so these modifier classes always win the cascade. */
@@ -84,6 +146,14 @@ function buildPreviewStateCss(cssCode: string): string {
   const resolvedCss = resolveCssCustomProperties(cssCode);
   const disabledBackground = extractDisabledColor(resolvedCss, "background", "#BDBDBD");
   const disabledText = extractDisabledColor(resolvedCss, "color", "#494949");
+
+  // Only simulate the focus ring when the submitted CSS actually defines a
+  // verifiable `:focus-visible` indicator. Without one the evaluator returns
+  // Unknown, and the preview must render the button as the code renders it —
+  // no synthetic ring.
+  const focusedOutline = hasVerifiableFocusVisible(cssCode)
+    ? "outline: 3px solid #011D53;\n  outline-offset: 2px;"
+    : "outline: none;";
 
   return `
 .btn.btn--default {
@@ -118,8 +188,7 @@ function buildPreviewStateCss(cssCode: string): string {
 .btn.btn--focused {
   background: #0540AB;
   color: #FFFFFF;
-  outline: 3px solid #011D53;
-  outline-offset: 2px;
+  ${focusedOutline}
   cursor: pointer;
 }
 `;
@@ -133,10 +202,12 @@ function PreviewContent({
   reactCode,
   selectedState,
   hasLoadedCode,
+  showFocusWarning,
 }: {
   reactCode: string;
   selectedState: ButtonPreviewState;
   hasLoadedCode: boolean;
+  showFocusWarning: boolean;
 }) {
   if (!hasLoadedCode) {
     return (
@@ -156,14 +227,22 @@ function PreviewContent({
 
   return (
     <div className="preview-canvas">
-      <button
-        type="button"
-        className={`btn btn--${selectedState}`}
-        disabled={selectedState === "disabled"}
-        onClick={() => {}}
-      >
-        <span className="btn__label">Button large</span>
-      </button>
+      <div className="preview-stack">
+        <button
+          type="button"
+          className={`btn btn--${selectedState}`}
+          disabled={selectedState === "disabled"}
+          onClick={() => {}}
+        >
+          <span className="btn__label">Button large</span>
+        </button>
+        {showFocusWarning && (
+          <p className="preview-focus-warning" role="status">
+            <span className="preview-focus-warning__icon" aria-hidden="true">⚠</span>
+            Missing focus-visible styling
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -176,13 +255,19 @@ export interface LiveButtonPreviewProps {
   previewTheme?: "light" | "dark";
 }
 
-function buildThemeCss(theme: "light" | "dark"): string {
+function buildThemeCss(theme: "light" | "dark", cssCode: string): string {
   const bg = theme === "dark" ? "#1A1A1A" : "#E6E6E6";
   const base = `.preview-canvas { background: ${bg}; } .preview-empty { background: ${bg}; }`;
 
   if (theme !== "dark") {
     return base;
   }
+
+  // Match the light-theme behaviour: no synthetic focus ring unless the
+  // submitted CSS defines a verifiable `:focus-visible` indicator.
+  const focusedOutline = hasVerifiableFocusVisible(cssCode)
+    ? "outline: 3px solid #367BF9;\n  outline-offset: 2px;"
+    : "outline: none;";
 
   return `${base}
 
@@ -209,8 +294,11 @@ function buildThemeCss(theme: "light" | "dark"): string {
 .preview-canvas .btn.btn--focused {
   background: #8DB6FF;
   color: #1A1A1A;
-  outline: 3px solid #367BF9;
-  outline-offset: 2px;
+  ${focusedOutline}
+}
+
+.preview-canvas .preview-focus-warning {
+  color: #9A9A9A;
 }`;
 }
 
@@ -228,6 +316,15 @@ export function LiveButtonPreview({
   hasLoadedCode = false,
   previewTheme = "light",
 }: LiveButtonPreviewProps) {
+  // The Focused state is selected but the submitted CSS defines no verifiable
+  // `:focus-visible` indicator — the same gap the evaluator reports as Unknown.
+  // Shown inside the preview, next to the button; never changes evaluation.
+  const showFocusWarning =
+    selectedState === "focused" &&
+    hasLoadedCode &&
+    hasRenderableButton(reactCode) &&
+    !hasVerifiableFocusVisible(cssCode);
+
 const hostRef = useRef<HTMLDivElement>(null);
 const userStyleRef = useRef<HTMLStyleElement | null>(null);
 const stateStyleRef = useRef<HTMLStyleElement | null>(null);
@@ -257,7 +354,7 @@ const reactRootRef = useRef<Root | null>(null);
 
       const themeStyle = document.createElement("style");
       themeStyle.setAttribute("data-preview-theme", "");
-      themeStyle.textContent = buildThemeCss(previewTheme);
+      themeStyle.textContent = buildThemeCss(previewTheme, cssCode);
       themeStyleRef.current = themeStyle;
 
       const mount = document.createElement("div");
@@ -286,19 +383,22 @@ useLayoutEffect(() => {
   if (stateStyleRef.current) {
     stateStyleRef.current.textContent = buildPreviewStateCss(cssCode);
   }
-}, [cssCode]);
 
-useLayoutEffect(() => {
   if (themeStyleRef.current) {
-    themeStyleRef.current.textContent = buildThemeCss(previewTheme);
+    themeStyleRef.current.textContent = buildThemeCss(previewTheme, cssCode);
   }
-}, [previewTheme]);
+}, [cssCode, previewTheme]);
 
   useLayoutEffect(() => {
     reactRootRef.current?.render(
-      <PreviewContent reactCode={reactCode} selectedState={selectedState} hasLoadedCode={hasLoadedCode} />
+      <PreviewContent
+        reactCode={reactCode}
+        selectedState={selectedState}
+        hasLoadedCode={hasLoadedCode}
+        showFocusWarning={showFocusWarning}
+      />
     );
-  }, [reactCode, selectedState, hasLoadedCode]);
+  }, [reactCode, selectedState, hasLoadedCode, showFocusWarning]);
 
   return <div ref={hostRef} className="live-button-preview-host" />;
 }

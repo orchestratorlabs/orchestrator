@@ -924,6 +924,60 @@ body {
   font-style: italic;
 }
 
+/* Section labels inside the Score Summary card — PASS, FAIL, and
+   UNKNOWN: NEEDS VERIFICATION. All three share this one rule, so their
+   typography is identical; the status dot colour is the only difference.
+   Every text property is declared explicitly here so nothing is left to
+   inheritance and the three headings can never drift apart. */
+.score-summary-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 4px;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* Keep the status dot at full saturation so it matches the Health Score
+   legend exactly; the heading text carries its own muted colour. */
+.score-summary-section-label .status-dot {
+  flex: 0 0 auto;
+}
+
+.needs-verification {
+  margin-top: 10px;
+}
+
+.needs-verification-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  /* Match the FAIL supporting copy (.score-interpretation-body → var(--muted),
+     #9AA6BA). Applies to the bold rule names, the em dash, the description and
+     the recommendation alike; bold emphasis is unaffected. */
+  color: var(--muted);
+}
+
+.needs-verification-list li {
+  margin: 3px 0;
+}
+
+/* When panel text is selected, paint the highlight with the accent tint instead
+   of the browser's default. An unfocused-window selection otherwise renders as a
+   dark grey that, over the dark card, looks like a near-black box behind the
+   text (~#07080A). This only styles the selection highlight — no element gets a
+   background. */
+.orchestrator-panel ::selection {
+  background: rgba(79, 140, 255, 0.4);
+  color: var(--text);
+}
+
 .score-interp-heading {
   display: flex;
   align-items: center;
