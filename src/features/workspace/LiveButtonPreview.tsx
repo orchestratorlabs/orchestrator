@@ -257,7 +257,13 @@ export interface LiveButtonPreviewProps {
 
 function buildThemeCss(theme: "light" | "dark", cssCode: string): string {
   const bg = theme === "dark" ? "#1A1A1A" : "#E6E6E6";
-  const base = `.preview-canvas { background: ${bg}; } .preview-empty { background: ${bg}; }`;
+  // Light keeps the shell's dark-on-light empty-state text; dark needs a light
+  // colour or the message is invisible against the dark canvas.
+  const emptyRule =
+    theme === "dark"
+      ? `.preview-empty { background: ${bg}; color: #E6E6E6; }`
+      : `.preview-empty { background: ${bg}; }`;
+  const base = `.preview-canvas { background: ${bg}; } ${emptyRule}`;
 
   if (theme !== "dark") {
     return base;
