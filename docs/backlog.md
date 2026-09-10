@@ -5,7 +5,7 @@ the top of each section. Companion to the deployment runbook, which is kept loca
 (`docs/design/vercel-demo-deploy-runbook.md`, gitignored — it contains hosting and
 DNS steps).
 
-Last updated: 2026-08-13
+Last updated: 2026-09-10
 
 ---
 
@@ -288,6 +288,37 @@ Claude):
 ---
 
 ## 3. Engineering quality
+
+### 3.0 Shipped 2026-09-10 — Score Summary Unknown surfacing + Focused-preview honesty
+
+One commit, `4e77e2d`, pushed to `origin/main` and live on
+`demo.orchestratorlabs.ai`. All presentation-only — no changes to scoring,
+evaluation, findings, or the Health Score.
+
+- **"Needs Verification" section in the Score Summary.** New
+  `buildNeedsVerification()` in `localScoreSummary.ts` derives a list straight
+  from the existing `Unknown` findings (rule name + evidence + recommendation);
+  `OrchestratorPanel` renders it under the prose, only when Unknown findings
+  exist. Fills the gap where the summary explained the Fail but never mentioned
+  the rules that couldn't be verified.
+- **Colour-coded status dots on the section headings** — green PASS, amber
+  UNKNOWN: NEEDS VERIFICATION, red FAIL, reusing the Health Score legend
+  colours via a shared `ScoreSummaryHeading` component. Each heading shows only
+  for its state (`failCount > 0`, `unknownCount > 0`, or all-pass).
+- **Unknown row text** set to `var(--muted)` (#9AA6BA) to match the Fail
+  supporting copy. State Coverage detail line shortened.
+- **Panel `::selection`** given an accent tint. An unfocused-window text
+  selection was rendering near-black over the dark card and reading as a
+  background box behind the Unknown text — it was never an element background
+  (verified via computed styles in a headless run).
+- **Focused-state preview no longer fakes a focus ring.**
+  `hasVerifiableFocusVisible()` in `LiveButtonPreview` mirrors the evaluator's
+  Rule 4 pass condition; when the submitted CSS has no real `:focus-visible`
+  indicator, the preview renders the button with `outline: none` (light and
+  dark), matching the Unknown the evaluator reports.
+- **"Missing focus-visible styling" note** appears under the button in that
+  case, dark-grey and secondary, absolutely positioned so the button holds the
+  exact vertical position it has in every other preview state.
 
 ### 3.0 Shipped 2026-08-13 — rail scroll, exportable report, DoubleCheck gating, Clear Code
 
