@@ -187,23 +187,19 @@ conventions below.
 `demo.orchestratorlabs.ai`, not the full `https://` form. It stays clickable in
 most clients and reads better in a sentence.
 
-### 2.13 Résumé patent line — gated on actually filing
+### 2.13 Résumé patent line — DONE 2026-09-10
 
-**Not yet.** Once the U.S. design patent application is filed (see the local,
-gitignored `docs/patent/orchestrator-design-patent-prep.md` tracker — 12 of 13
-figures captured as of 2026-08-17, one tight crop outstanding), add to the
-résumé/interview material:
+Craig confirmed the line is live on the résumé / portfolio:
 
-> Creator of OrchestratoR™ — U.S. Design Patent Application Pending
+> Founder & Independent AI Product Designer | U.S. Design Patent Application Pending
 
-**Why:** signals original product IP and system/product-level thinking, not
-just interface design.
+This means the U.S. design patent application has actually been filed. Record
+the USPTO application number and the confirmed earliest-disclosure date in the
+local tracker (`docs/patent/orchestrator-design-patent-prep.md`) if not already
+there — see the patent-prep memory, guardrail 2.
 
-**Guardrail — do not add this line, or say "Patent Pending" anywhere public
-(résumé, portfolio, LinkedIn, interviews), until a USPTO application number
-actually exists.** Not when the figures are done. Not when the application is
-drafted. This mirrors the standing guardrail already in the patent tracker —
-same rule, now cross-referenced here so it surfaces from the backlog too.
+The original gating guardrail (no "Patent Pending" anywhere public until a USPTO
+application number exists) is now satisfied and no longer a standing reminder.
 
 ### Link conventions (settled)
 
