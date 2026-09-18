@@ -301,6 +301,52 @@ Claude):
 
 ## 3. Engineering quality
 
+### 3.0 Planned for Mon/Tue 2026-09-21/22 — ARIA Semantics rule (+ Button 2 icon example)
+
+Grew out of the 2026-09-18 SME feedback session
+([docs/ORCHESTRATOR_SME_FEEDBACK_2026-09-18.md](ORCHESTRATOR_SME_FEEDBACK_2026-09-18.md)),
+specifically KJ's "add ARIA evaluation rules" request — this is the first
+concrete rule scoped out of that broader ask, picked because it's the smallest
+self-contained slice that proves the pattern.
+
+**New rule card: `rule-10-aria-semantics` / "ARIA Semantics".** Deliberately
+scoped to avoid duplicating `rule-1-semantic-button` — it only adds signal on
+**non-native** button implementations (`<div onClick>` etc.), checking for
+`role="button"`. On a native `<button>`, it passes trivially (implicit role);
+the card only becomes load-bearing on the div/span case, which today only gets
+flagged for keyboard operability (`rule-3`), not for being unannounced to
+assistive tech.
+
+- Pass (native `<button>`): *"Native `<button>` elements carry an implicit
+  ARIA role of "button" — no explicit `role` attribute is required."*
+- Fail (non-native, no `role`): *"Non-native element used as a button is
+  missing `role="button"`, so assistive technology has no way to identify it
+  as an interactive control."* Severity: Critical. Recommendation: add
+  `role="button"`, or use a native `<button>` element.
+
+**Related, separate task — "Button 2" icon-only example.** A second seeded
+sample component (icon only, no visible text/`aria-label`) to demonstrate the
+existing `rule-2-accessible-name` Fail case live, alongside the current
+text-labeled sample. Added as a **second** example, not a modification of the
+current seed — the existing button is the known-good 85-light/100-dark
+baseline the manual smoke test depends on (see
+[[evaluator-baseline-and-verification]]), and must not change.
+
+**Effort estimate:**
+
+- ~30–45 min — add the rule to `RULES` in `buttonEvaluator.ts`; reuses the
+  existing native-`<button>` match and the div/span-`onClick` regex already in
+  `rule-3`, so no new parsing logic.
+- ~15–20 min — confirm it doesn't shift the known-good baseline scores.
+- ~15–30 min — manual smoke test: native button (Pass), div+onClick without
+  `role` (Fail), same with `role="button"` added (Pass).
+- +~30–45 min if Button 2 is built in the same session (second seeded
+  component + a way to load it in the workspace, not evaluator logic).
+
+**Total: ~1.5–2 hours for the rule alone, ~2–2.5 hours with Button 2 included.**
+No test suite exists to lean on, so this time is manual verification, not
+automated — the main risk to the estimate.
+
 ### 3.0 Shipped 2026-09-10 — Score Summary Unknown surfacing + Focused-preview honesty
 
 One commit, `4e77e2d`, pushed to `origin/main` and live on
