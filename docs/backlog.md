@@ -131,12 +131,28 @@ Steps 4–5 are the hook. Everything else is supporting detail.
   study finished first, so the video is an entry point rather than the whole
   artefact.
 
-### Medium article *(start 2026-09-01)*
+### Medium article — PUBLISHED 2026-09-18
 
-Write and publish a Medium piece, cross-linked to the demo, the case study and
-the YouTube walkthrough.
+Published through **Bootcamp** (UX Collective's Medium publication), under the
+title **"Accessibility Is Broken in Modern Product Teams: Let AI Help Fix It,"**
+subtitled **"How AI can help product teams catch accessibility false negatives
+earlier, surface uncertainty, and bring human judgment into the workflow before
+release."** URL not yet recorded here — add it once in hand, then cross-link
+from the case study, README, and LinkedIn Featured per the sequencing note
+below.
 
-**Candidate angles, strongest first:**
+This title doesn't match any of the four candidate angles drafted below — it's
+broader, closer in spirit to angle 3/4 (the architectural argument / "designing
+with AI, not just for it") than to angle 1. **That means backlog §3.2 (is
+`rule-5-text-contrast` deliberately stricter than WCAG?) was not resolved by
+this publication** and is still open — angle 1 was the only one gated on it.
+
+Sequencing also ended up out of order: the backlog called for demo → video →
+article, but the article published before the walkthrough video was filmed.
+Not a problem, just worth noting so the video doesn't get scripted as if it's
+introducing the article for the first time.
+
+**Original candidate angles (for reference — superseded by the above):**
 
 1. **"My own AI layer told me my accessibility rule was wrong."** The
    deterministic rule flags the disabled-state contrast as a failure; the Claude
