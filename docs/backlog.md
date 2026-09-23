@@ -301,7 +301,7 @@ Claude):
 
 ## 3. Engineering quality
 
-### 3.0 Planned for Mon/Tue 2026-09-21/22 — ARIA Semantics rule (+ Button 2 icon example)
+### 3.0 Planned for Friday 2026-09-25 — ARIA Semantics rule (+ Button 2 icon example)
 
 Grew out of the 2026-09-18 SME feedback session
 ([docs/ORCHESTRATOR_SME_FEEDBACK_2026-09-18.md](ORCHESTRATOR_SME_FEEDBACK_2026-09-18.md)),
