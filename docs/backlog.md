@@ -301,7 +301,7 @@ Claude):
 
 ## 3. Engineering quality
 
-### 3.0 Planned for Friday 2026-09-25 — ARIA Semantics rule (+ Button 2 icon example)
+### 3.0 Planned for Friday 2026-09-25 — ARIA Semantics rule
 
 Grew out of the 2026-09-18 SME feedback session
 ([docs/ORCHESTRATOR_SME_FEEDBACK_2026-09-18.md](ORCHESTRATOR_SME_FEEDBACK_2026-09-18.md)),
@@ -324,15 +324,17 @@ assistive tech.
   as an interactive control."* Severity: Critical. Recommendation: add
   `role="button"`, or use a native `<button>` element.
 
-**Related, separate task — "Button 2" icon-only example.** A second seeded
-sample component (icon only, no visible text/`aria-label`) to demonstrate the
-existing `rule-2-accessible-name` Fail case live, alongside the current
-text-labeled sample. Added as a **second** example, not a modification of the
+**Related, separate task — "Button 2" icon-only example — DEFERRED, not part of
+Friday's session (Craig, 2026-09-23).** A second seeded sample component (icon
+only, no visible text/`aria-label`) to demonstrate the existing
+`rule-2-accessible-name` Fail case live, alongside the current text-labeled
+sample. Would be added as a **second** example, not a modification of the
 current seed — the existing button is the known-good 85-light/100-dark
 baseline the manual smoke test depends on (see
-[[evaluator-baseline-and-verification]]), and must not change.
+[[evaluator-baseline-and-verification]]), and must not change. Revisit
+separately; not scoped into the ARIA Semantics work below.
 
-**Effort estimate:**
+**Effort estimate (rule only):**
 
 - ~30–45 min — add the rule to `RULES` in `buttonEvaluator.ts`; reuses the
   existing native-`<button>` match and the div/span-`onClick` regex already in
@@ -340,12 +342,9 @@ baseline the manual smoke test depends on (see
 - ~15–20 min — confirm it doesn't shift the known-good baseline scores.
 - ~15–30 min — manual smoke test: native button (Pass), div+onClick without
   `role` (Fail), same with `role="button"` added (Pass).
-- +~30–45 min if Button 2 is built in the same session (second seeded
-  component + a way to load it in the workspace, not evaluator logic).
 
-**Total: ~1.5–2 hours for the rule alone, ~2–2.5 hours with Button 2 included.**
-No test suite exists to lean on, so this time is manual verification, not
-automated — the main risk to the estimate.
+**Total: ~1.5–2 hours.** No test suite exists to lean on, so this time is
+manual verification, not automated — the main risk to the estimate.
 
 ### 3.0 Shipped 2026-09-10 — Score Summary Unknown surfacing + Focused-preview honesty
 
