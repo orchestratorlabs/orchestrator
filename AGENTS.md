@@ -39,6 +39,7 @@ If a rule cannot be verified from the available evidence, the AI must return **U
 | [docs/orchestrator_rag_registry.txt](docs/orchestrator_rag_registry.txt) | Registry/index that maps component types to their RAG files. Route evaluation requests through this file to find the correct grounding document. |
 | [docs/orchestrator_button_health_score_rag.txt](docs/orchestrator_button_health_score_rag.txt) | Component-specific rule source of truth for React button accessibility evaluation. Primary grounding document for the MVP evaluator. |
 | [docs/mvp_scoring_policy.md](docs/mvp_scoring_policy.md) | Scoring formula, Unknown handling, and canonical findings ordering. |
+| [docs/ARIA-Score/ARIA_Score.md](docs/ARIA-Score/ARIA_Score.md) | Current source of truth for ARIA scoring behavior (N/A, Pass, Fail outcomes and the provisional -10 ARIA Fail deduction). Where it conflicts with the evaluator, surface the conflict before changing scoring. |
 | [docs/orchestrator_prompt_template.md](docs/orchestrator_prompt_template.md) | System and user prompt templates, output structure, and evaluator guardrails. |
 | [docs/orchestrator_wireframe_spec.md](docs/orchestrator_wireframe_spec.md) | UI wireframe specification for the right-side copilot panel and application layout. |
 
@@ -60,16 +61,19 @@ Use these exact status definitions:
 - **Pass** = verified and compliant
 - **Fail** = verified and not compliant
 - **Unknown** = not enough evidence to verify either one
+- **Not Applicable** = the rule verifiably does not apply to this component
 
 Unknown must not be treated as Pass or Fail.  
 Unknown should be surfaced separately when evidence is missing.
+
+Not Applicable is not a substitute for Unknown. It is returned only by predefined evaluator logic when the evaluator has positively verified that the rule does not apply. It carries no score deduction and never raises the Health Score. The AI layer must not assign or override it.
 
 ## Output Requirements
 Each evaluation must return:
 
 1. Accessibility Health Score out of 100
 2. Summary
-3. Pass / Fail / Unknown status per rule
+3. Pass / Fail / Unknown / Not Applicable status per rule
 
 When relevant, include:
 - clear findings
@@ -107,6 +111,7 @@ In the right-side panel:
 - show the Accessibility Health Score at the top
 - show rule results clearly underneath
 - surface **Pass** rules first
+- show **Not Applicable** rules after Pass, visually muted
 - show **Unknown** where evidence is missing
 - show **Fail** rules last
 

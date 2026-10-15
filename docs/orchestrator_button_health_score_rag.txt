@@ -7,7 +7,7 @@ type: rag_knowledge_document
 title: React Button Accessibility Health Score Rules
 author: OpenAI for Craig Maher
 product: OrchestratoR
-version: 3.0
+version: 3.1
 language: English
 intended_use: Ground an LLM when evaluating a React button component and generating an accessibility health score, findings, and recommended fixes.
 
@@ -55,7 +55,8 @@ Output -> A11Y findings, health score, and recommended fixes
 
 This file focuses on the most relevant accessibility checks for a button:
 - semantic HTML
-- accessible name
+- accessible name (including icon handling)
+- ARIA role exposure for non-native buttons
 - keyboard operability
 - visible focus indicator
 - text contrast
@@ -108,15 +109,26 @@ Pass example:
 Rule 2: Button must have an accessible name
 Requirement:
 The button's name and role must be programmatically determinable.
+Native semantics come first: a native <button> with meaningful visible text already has an accessible name and must NOT be asked to add a redundant aria-label.
 Pass when:
 - visible button text clearly names the action, or
-- aria-label or aria-labelledby provides the accessible name
+- visible button text names the action and any icon is decorative (marked aria-hidden="true") so it adds no competing name, or
+- the button is icon-only and aria-label or aria-labelledby provides the accessible name
 Fail when:
 - icon-only button has no accessible label
 - label is empty or unclear
 Pass examples:
 <button>Submit</button>
+<button>Submit <SendIcon aria-hidden="true" /></button>
 <button aria-label="Close dialog"><CloseIcon /></button>
+Icon handling (deterministic; the LLM must not decide these outcomes):
+- Icon detected + visible text + icon is aria-hidden -> Pass
+- Icon detected + no visible text + accessible name present -> Pass
+- Icon detected + no visible text + no accessible name -> Fail
+- No icon detected -> the icon-only check is Not Applicable. It is recorded in this rule's evidence text only; the rule's own status is decided by the remaining branches (for example, visible text -> Pass).
+- An icon that cannot be classified (for example aria-labelledby pointing at an id that cannot be found) -> Unknown, not Fail.
+Not Applicable may only be returned when no icon candidate is found in the markup or CSS. Candidates include <svg>, <img>, <i>, an Icon-named component, and CSS-generated icons. If a candidate is found but cannot be classified, return Unknown.
+Review status: icon branches are PENDING ACCESSIBILITY SME REVIEW, including the definition of "decorative".
 
 Rule 3: All functionality must be keyboard operable
 Requirement:
@@ -189,6 +201,30 @@ Fail when:
 - focus state is missing
 - hover and active states create confusing or inaccessible contrast changes
 
+Rule 10: ARIA role must be exposed for non-native buttons
+Requirement:
+Name, Role, Value (WCAG 4.1.2): the button role must be programmatically determinable. This rule asks only one question: is the button role exposed to assistive technology?
+Scope:
+This rule does not re-test keyboard operability (Rule 3) or the preference for native markup (Rule 1). It isolates the role. Native <button> elements expose the role implicitly and need no ARIA.
+Not Applicable when:
+- the button is a native <button> element (implicit role "button"; no ARIA required)
+Pass when:
+- a non-native element (for example <div> or <span>) used as a button carries role="button"
+Fail when:
+- a non-native element used as a button has no role="button", so assistive technology cannot identify it as an interactive control
+Unknown when:
+- no button element can be found in the provided code
+Pass example (non-native):
+<div role="button" tabIndex={0} onClick={save}>Save</div>
+Fail example (non-native):
+<div onClick={save}>Save</div>
+Not Applicable example (native):
+<button type="button">Save</button>
+Note:
+role="button" on a non-native element does not add keyboard support. Rules 1 and 3 continue to evaluate that element independently.
+Do not require role="button" on a native <button>, and do not treat its absence there as a defect.
+Review status: PENDING ACCESSIBILITY SME REVIEW. The deduction value below is PROVISIONAL, not SME-approved. ARIA scoring behavior is defined in docs/ARIA-Score/ARIA_Score.md, the current source of truth for it.
+
 ========================================
 SCORING MODEL
 ========================================
@@ -208,9 +244,15 @@ Deduction model:
 - Target size under 44x44: -10
 - Missing required state: -5 each
 - Disabled state misleading: -5
+- Non-native button missing role="button": -10 (PROVISIONAL, pending SME review; kept small because Rules 1 and 3 already penalise the same non-native element)
+
+Not Applicable results:
+- Carry no deduction.
+- Are not counted as Pass or Fail, in the RAG deduction model or in the MVP fallback formula.
+- Never raise the score. A rule that does not apply must not inflate the Health Score.
 
 Severity guidance:
-- Critical: semantic HTML, keyboard access, missing accessible name
+- Critical: semantic HTML, keyboard access, missing accessible name, missing role on a non-native button
 - High: focus visibility, text contrast
 - Medium: non-text contrast, target size, state coverage
 - Low: minor state styling inconsistencies
@@ -245,6 +287,7 @@ Findings:
 - [Pass/Fail/Unknown] Non-text Contrast
 - [Pass/Fail/Unknown] Target Size
 - [Pass/Fail/Unknown] State Coverage
+- [Pass/Fail/Unknown/Not Applicable] ARIA Semantics
 
 Recommended Fixes:
 - [specific fix]
@@ -275,6 +318,7 @@ Findings:
 - Unknown: Non-text Contrast
 - Unknown: Target Size
 - Fail: State Coverage
+- Fail: ARIA Semantics (non-native element without role="button")
 
 Recommended Fixes:
 - Replace div with native <button type="button">Save</button>
@@ -314,5 +358,8 @@ When evaluating a React button component, prefer authoritative rules in this ord
 5. target size and state completeness
 
 Do not invent requirements that are not supported by the source notes.
+Prefer native HTML semantics. Do not recommend ARIA where native markup already provides the name and role.
+Pass, Fail, Unknown and Not Applicable outcomes for Rules 2 and 10 are determined by the evaluator's predefined logic. Do not guess them, and do not override or reinterpret a deterministic outcome. You may explain it.
 If evidence is missing, mark the rule as Unknown rather than Pass.
+Not Applicable means the rule verifiably does not apply to this component. It is not a substitute for Unknown.
 If semantic markup, accessible name, or keyboard operation fails, lower the score aggressively.

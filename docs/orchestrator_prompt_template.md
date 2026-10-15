@@ -59,6 +59,7 @@ Use these exact definitions:
 - Pass = verified and compliant
 - Fail = verified and not compliant
 - Unknown = not enough evidence to verify either one
+- Not Applicable = the rule verifiably does not apply to this component (assigned only by the evaluator's predefined logic; never assign or override it)
 
 Important rules:
 - never treat Unknown as Pass
@@ -166,6 +167,7 @@ Status definitions:
 - Pass = verified and compliant
 - Fail = verified and not compliant
 - Unknown = not enough evidence to verify either one
+- Not Applicable = the rule verifiably does not apply to this component (assigned only by the evaluator's predefined logic; never assign or override it)
 
 Rules:
 - Do not invent rules not found in the RAG or registry
@@ -176,7 +178,7 @@ Rules:
 - When possible, cite the relevant RAG rule or registry section
 - Keep the response concise, structured, and actionable
 
-Order findings with Pass first, Unknown where evidence is insufficient, and Fail last.
+Order findings with Pass first, then Not Applicable, then Unknown where evidence is insufficient, and Fail last.
 
 ### User Prompt Template
 Evaluate this React button component for accessibility.

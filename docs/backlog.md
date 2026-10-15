@@ -5,7 +5,7 @@ the top of each section. Companion to the deployment runbook, which is kept loca
 (`docs/design/vercel-demo-deploy-runbook.md`, gitignored — it contains hosting and
 DNS steps).
 
-Last updated: 2026-09-10
+Last updated: 2026-10-15
 
 ---
 
@@ -301,50 +301,99 @@ Claude):
 
 ## 3. Engineering quality
 
-### 3.0 Planned for Friday 2026-09-25 — ARIA Semantics rule
+### 3.0 ARIA Semantics rule + Not Applicable status — scope refined 2026-10-15
 
 Grew out of the 2026-09-18 SME feedback session
 ([docs/ORCHESTRATOR_SME_FEEDBACK_2026-09-18.md](ORCHESTRATOR_SME_FEEDBACK_2026-09-18.md)),
-specifically KJ's "add ARIA evaluation rules" request — this is the first
-concrete rule scoped out of that broader ask, picked because it's the smallest
-self-contained slice that proves the pattern.
+specifically KJ's "add ARIA evaluation rules" request. Originally scheduled for
+Friday 2026-09-25, it did not ship and was picked up on 2026-10-15. The scope
+below **refines** the original `rule-10-aria-semantics` plan against a
+component-specific ARIA brief; it does not replace it.
 
-**New rule card: `rule-10-aria-semantics` / "ARIA Semantics".** Deliberately
-scoped to avoid duplicating `rule-1-semantic-button` — it only adds signal on
-**non-native** button implementations (`<div onClick>` etc.), checking for
-`role="button"`. On a native `<button>`, it passes trivially (implicit role);
-the card only becomes load-bearing on the div/span case, which today only gets
-flagged for keyboard operability (`rule-3`), not for being unannounced to
-assistive tech.
+**What changed from the original plan, and why.** Reading the evaluator showed
+the original plan overlapped existing rules:
 
-- Pass (native `<button>`): *"Native `<button>` elements carry an implicit
-  ARIA role of "button" — no explicit `role` attribute is required."*
-- Fail (non-native, no `role`): *"Non-native element used as a button is
-  missing `role="button"`, so assistive technology has no way to identify it
-  as an interactive control."* Severity: Critical. Recommendation: add
-  `role="button"`, or use a native `<button>` element.
+- A `<div onClick>` already **Fails Rule 1** (semantic markup) and **Rule 3**
+  (keyboard). The earlier note that only Rule 3 flagged it was out of date.
+- The original "native `<button>` passes trivially" would have added a free Pass
+  to the known-good baseline, which is score inflation. **Not Applicable** is the
+  honest answer for a rule that does not apply.
+- Rule 2 already has the icon-only Fail but infers it from the absence of text;
+  there is no real icon detection.
 
-**Related, separate task — "Button 2" icon-only example — DEFERRED, not part of
-Friday's session (Craig, 2026-09-23).** A second seeded sample component (icon
-only, no visible text/`aria-label`) to demonstrate the existing
-`rule-2-accessible-name` Fail case live, alongside the current text-labeled
-sample. Would be added as a **second** example, not a modification of the
-current seed — the existing button is the known-good 85-light/100-dark
-baseline the manual smoke test depends on (see
-[[evaluator-baseline-and-verification]]), and must not change. Revisit
-separately; not scoped into the ARIA Semantics work below.
+**Architecture rule.** ARIA is never one universal rule. It follows: component
+type → semantic role → expected behaviour → interaction states → accessibility
+requirements → deterministic rules, with the requirements reviewed by the
+accessibility SME team. Button, Card, and Modal need different rule packages
+(`buttonRules.ts`, `cardRules.ts`, `modalRules.ts`, ...). That split is the
+**long-term direction only** — it is not built now. Rules stay in
+`buttonEvaluator.ts` until a second component forces the extraction. The
+DoubleCheck agent may explain deterministic outcomes but must not invent or
+silently override them (see the §3.2 tension below).
 
-**Effort estimate (rule only):**
+**Refined scope — four parts, in this order:**
 
-- ~30–45 min — add the rule to `RULES` in `buttonEvaluator.ts`; reuses the
-  existing native-`<button>` match and the div/span-`onClick` regex already in
-  `rule-3`, so no new parsing logic.
-- ~15–20 min — confirm it doesn't shift the known-good baseline scores.
-- ~15–30 min — manual smoke test: native button (Pass), div+onClick without
-  `role` (Fail), same with `role="button"` added (Pass).
+1. **Docs first (done 2026-10-15, uncommitted).** RAG v3.1 (Rule 2 icon branches,
+   new Rule 10, N/A scoring), `mvp_scoring_policy.md`, `AGENTS.md`, and the
+   prompt, wireframe, and README status lists. New and changed rules are marked
+   **pending SME review**.
+2. **Not Applicable status.** Add `"Not Applicable"` to `RuleStatus`; exclude it
+   from both sides of the score; sort it after Pass; render it as a muted card
+   with a fourth indicator colour that passes 4.5:1 contrast; carry it through
+   the exported report and the Claude payload.
+3. **`rule-10-aria-semantics` / "ARIA Semantics" — narrowed to one question: is
+   the button role exposed to assistive technology?**
+   - Native `<button>` → **Not Applicable** (implicit role)
+   - Non-native element with `role="button"` → Pass
+   - Non-native element without `role` → Fail, Critical
+   - No element found → Unknown
+4. **Rule 2 (Accessible Name) gains real icon detection.** Branches: visible text
+   → Pass; text + `aria-hidden` icon → Pass; icon-only + name → Pass; icon-only
+   + no name → Fail; unclassifiable icon → Unknown. "No icon exists" is recorded
+   in Rule 2's evidence line, not as a separate N/A card, so the default sample
+   shows one N/A rather than two. N/A is returned only when no icon candidate is
+   found in markup or CSS.
 
-**Total: ~1.5–2 hours.** No test suite exists to lean on, so this time is
-manual verification, not automated — the main risk to the estimate.
+**Open decisions:**
+
+- **Scoring source of truth:** [ARIA-Score/ARIA_Score.md](ARIA-Score/ARIA_Score.md)
+  (added 2026-10-15). N/A and Pass carry 0 points. A Fail carries its own
+  rule's deduction: **Rule 2 (Accessible Name) -25**, **Rule 10 (ARIA
+  Semantics) -10, provisional**. **Resolved 2026-10-15 (Option A):** the doc
+  originally implied an icon-only missing name was a -10 ARIA Fail; it was
+  corrected to match RAG v3 and the evaluator, which keep -25 for Rule 2.
+- **Rule 10 deduction is PROVISIONAL at -10**, chosen small because Rules 1 and 3
+  already penalise the same non-native element. A Fail rule without a RAG
+  deduction silently switches scoring to the fallback formula, so a value is
+  required. SME to confirm.
+- **§3.2 tension.** "The AI must not silently override the deterministic outcome"
+  sits awkwardly with the current Claude summary telling the user the Text
+  Contrast Fail is "not a WCAG failure." Resolving §3.2 settles which side is
+  deliberate.
+- The definition of a "decorative" icon (`aria-hidden="true"` for now) needs SME
+  sign-off.
+
+**Related, separate task — "Button 2" icon-only example — DEFERRED (Craig,
+2026-09-23).** A second seeded sample component (icon only, no visible
+text/`aria-label`) to demonstrate the existing `rule-2-accessible-name` Fail case
+live. Would be added as a **second** example, not a modification of the current
+seed — the existing button is the known-good 85-light/100-dark baseline the
+manual smoke test depends on (see [[evaluator-baseline-and-verification]]), and
+must not change. Note the default sample has no icon, so the icon branches
+cannot be exercised by it; verify them with ad-hoc `_smoke.ts` inputs.
+
+**Verification (manual — no test suite):**
+
+- Baseline unchanged: light **85** / dark **100**, zero Unknown, with Rule 10 now
+  showing Not Applicable.
+- Rule 10: native `<button>` (N/A), `<div onClick>` with no `role` (Fail),
+  `<div role="button" onClick>` (Pass — Rules 1 and 3 still Fail, which is
+  correct).
+- Rule 2: text only, text + `aria-hidden` icon, icon-only named, icon-only
+  unnamed, unresolvable `aria-labelledby` (Unknown).
+
+**Effort estimate:** roughly 3–4 hours, up from 1.5–2 for the original rule-only
+scope. The extra time is the N/A plumbing and the Rule 2 icon detection.
 
 ### 3.0 Shipped 2026-09-10 — Score Summary Unknown surfacing + Focused-preview honesty
 

@@ -109,8 +109,9 @@ This section should:
 The findings list should be ordered as follows:
 
 1. Pass rules first
-2. Unknown shown wherever evidence is missing
-3. Fail rules last
+2. Not Applicable rules next, visually muted
+3. Unknown shown wherever evidence is missing
+4. Fail rules last
 
 Unknown should not be treated as Pass or Fail. It should be surfaced explicitly when a rule cannot be verified from the available evidence.
 
@@ -125,6 +126,7 @@ Status indicators may include:
 - green dot or equivalent for Pass
 - red dot or equivalent for Fail
 - neutral or amber indicator for Unknown
+- muted grey indicator for Not Applicable (text must still meet 4.5:1 contrast)
 
 The design should prioritize readability and fast scanning.
 
