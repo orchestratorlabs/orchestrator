@@ -53,6 +53,27 @@ const STATUS_CLASS: Record<A11yDoubleCheckResult["status"], string> = {
   FAIL: "doublecheck-status--fail",
 };
 
+/**
+ * Shown when Submit is pressed with an empty question. The button stays enabled
+ * so this can be explained: a disabled control cannot be focused and gives
+ * keyboard and screen reader users no reason for being unavailable.
+ */
+const EMPTY_QUESTION_MESSAGE = "You need to first ask a question, then Submit";
+
+const FINDING_PANEL_SORT_ORDER: Record<string, number> = { Fail: 0, Unknown: 1, Pass: 2 };
+
+/**
+ * The order findings are shown in the panel. Shared with the exported report so
+ * the number on a finding card ("3.") refers to the same finding in both places.
+ * The sort is stable, so rules keep their source order within a status.
+ */
+function sortFindingsForPanel(findings: EvaluationResult["findings"]) {
+  return [...findings].sort(
+    (a, b) =>
+      (FINDING_PANEL_SORT_ORDER[a.status] ?? 3) - (FINDING_PANEL_SORT_ORDER[b.status] ?? 3)
+  );
+}
+
 export function OrchestratorPanel({
   isOpen,
   evaluationStateMessage,
@@ -146,11 +167,15 @@ export function OrchestratorPanel({
     const passCount = result.findings.filter((f) => f.status === "Pass").length;
     const unknownCount = result.findings.filter((f) => f.status === "Unknown").length;
     const failCount = result.findings.filter((f) => f.status === "Fail").length;
-    const findingLines = result.findings.map(
-      (f) => `- [${f.status}] ${f.ruleName} (${f.severity}) — ${f.evidence}${
-        f.recommendation ? `\n  Recommendation: ${f.recommendation}` : ""
-      }`
-    );
+    // Numbered in the panel's display order so "finding 3" means the same
+    // finding in the report and on screen. Continuation lines are indented to
+    // the width of the list marker so they stay part of the list item.
+    const findingLines = sortFindingsForPanel(result.findings).map((f, index) => {
+      const marker = `${index + 1}. `;
+      return `${marker}[${f.status}] ${f.ruleName} (${f.severity}) — ${f.evidence}${
+        f.recommendation ? `\n${" ".repeat(marker.length)}Recommendation: ${f.recommendation}` : ""
+      }`;
+    });
     const fixLines = result.recommendedFixes.map((fix) => `- ${fix}`);
     return [
       `## ${label}`,
@@ -197,12 +222,9 @@ export function OrchestratorPanel({
     URL.revokeObjectURL(url);
   };
 
-  const STATUS_SORT_ORDER: Record<string, number> = { Fail: 0, Unknown: 1, Pass: 2 };
   const sortedFindings = useMemo(() => {
     if (!evaluationResult) return [];
-    return [...evaluationResult.findings].sort(
-      (a, b) => (STATUS_SORT_ORDER[a.status] ?? 3) - (STATUS_SORT_ORDER[b.status] ?? 3)
-    );
+    return sortFindingsForPanel(evaluationResult.findings);
   }, [evaluationResult]);
 
   const [copiedHex, setCopiedHex] = useState<string | null>(null);
@@ -235,9 +257,17 @@ export function OrchestratorPanel({
   const [ragAnswer, setRagAnswer] = useState("");
   const [isRagLoading, setIsRagLoading] = useState(false);
   const [ragError, setRagError] = useState("");
+  const ragQuestionRef = useRef<HTMLTextAreaElement>(null);
+  const isEmptyQuestionError = ragError === EMPTY_QUESTION_MESSAGE;
 
   const handleRagSubmit = async () => {
-    if (!ragQuestion.trim()) return;
+    if (!ragQuestion.trim()) {
+      setRagError(EMPTY_QUESTION_MESSAGE);
+      // Put focus where the fix is. The message is announced by its alert role
+      // and is also tied to the field through aria-describedby.
+      ragQuestionRef.current?.focus();
+      return;
+    }
 
     // State the limitation rather than reporting a load failure on hosted demos,
     // where the local Flask service cannot be reached.
@@ -598,9 +628,16 @@ export function OrchestratorPanel({
 
         <textarea
           id="rag-question"
+          ref={ragQuestionRef}
           className="ask-orchestrator-input"
           value={ragQuestion}
-          onChange={(event) => setRagQuestion(event.target.value)}
+          aria-invalid={isEmptyQuestionError ? true : undefined}
+          aria-describedby={isEmptyQuestionError ? "rag-question-error" : undefined}
+          onChange={(event) => {
+            setRagQuestion(event.target.value);
+            // The prompt has done its job once they start typing.
+            if (isEmptyQuestionError) setRagError("");
+          }}
           placeholder="Ask about this component, rule, or finding..."
           rows={3}
         />
@@ -609,13 +646,17 @@ export function OrchestratorPanel({
           type="button"
           className="ask-orchestrator-submit"
           onClick={handleRagSubmit}
-          disabled={isRagLoading || !ragQuestion.trim()}
+          disabled={isRagLoading}
         >
           {isRagLoading ? "Submitting..." : "Submit question"}
         </button>
 
         {ragError ? (
-          <div className="rag-response rag-response--error" role="alert">
+          <div
+            id={isEmptyQuestionError ? "rag-question-error" : undefined}
+            className="rag-response rag-response--error"
+            role="alert"
+          >
             {ragError}
           </div>
         ) : null}
@@ -633,7 +674,7 @@ export function OrchestratorPanel({
 
         {evaluationResult ? (
           <ul className="findings-list">
-            {sortedFindings.map((finding) => (
+            {sortedFindings.map((finding, index) => (
               <li
                 key={finding.ruleId}
                 className={`finding ${finding.status.toLowerCase()} ${
@@ -656,7 +697,13 @@ export function OrchestratorPanel({
                   }
                 }}
               >
-                <p>
+                <div className="finding-header">
+                  <p className="finding-title">
+                    <span className="finding-number" aria-hidden="true">
+                      {index + 1}.
+                    </span>
+                    {finding.ruleName}
+                  </p>
                   <strong className="finding-status">
                     {finding.status === "Pass" && (
                       <span className="finding-status-icon pass" aria-hidden="true">
@@ -674,37 +721,35 @@ export function OrchestratorPanel({
                       </span>
                     )}
                     {finding.status}
-                  </strong>{" "}
-                  - {finding.ruleName}
-                </p>
+                  </strong>
+                </div>
                 <p className="muted">{finding.evidence}</p>
-                <p className="muted">Severity: {finding.severity}</p>
+                <p className="muted finding-severity">Severity: {finding.severity}</p>
                 <p className="muted">Recommendation: {renderWithCopyableHex(finding.recommendation)}</p>
               </li>
             ))}
           </ul>
         ) : (
           <ul className="status-legend">
-            <li>Pass - verified and compliant</li>
-            <li>Unknown - insufficient evidence</li>
-            <li>Fail - verified and not compliant</li>
+            <li>
+              <span className="finding-status-icon pass" aria-hidden="true">
+                ✓
+              </span>
+              Pass - verified and compliant
+            </li>
+            <li>
+              <span className="finding-status-icon unknown" aria-hidden="true">
+                ?
+              </span>
+              Unknown - insufficient evidence
+            </li>
+            <li>
+              <span className="finding-status-icon fail" aria-hidden="true">
+                !
+              </span>
+              Fail - verified and not compliant
+            </li>
           </ul>
-        )}
-      </section>
-
-      <section className="panel-card">
-        <h3>Fixes</h3>
-        {evaluationResult ? (
-          <ul className="status-legend">
-            {evaluationResult.recommendedFixes.map((fix) => (
-              <li key={fix}>{fix}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted">
-            Recommended fixes will appear after evaluation. No evaluator engine is active in this
-            stage.
-          </p>
         )}
       </section>
 

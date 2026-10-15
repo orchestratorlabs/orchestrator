@@ -729,9 +729,9 @@ body {
   border: 1px solid #3b82f6;
   border-radius: 8px;
   background: #1f3f78;
-  color: var(--text);
+  color: #e6e6e6;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
   padding: 9px 16px;
   cursor: pointer;
@@ -1100,10 +1100,22 @@ body {
 }
 
 .status-legend {
+  list-style: none;
   margin: 8px 0 0;
-  padding-left: 16px;
+  padding: 0;
   font-size: 12px;
   color: #c7d0de;
+}
+
+/* The empty-state legend previews the status markers the finding cards use. */
+.status-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-legend li + li {
+  margin-top: 6px;
 }
 
 .findings-list {
@@ -1112,7 +1124,7 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .finding {
@@ -1125,6 +1137,14 @@ body {
 .finding p {
   margin: 0 0 4px;
   font-size: 12px;
+  line-height: 1.5;
+}
+
+/* The Severity line is the one body line that is not muted: #e6e6e6 is about
+   12.8:1 on the card (11.4:1 on hover). */
+.finding .finding-severity {
+  padding-top: 6px;
+  color: #e6e6e6;
 }
 
 .hex-copy-btn {
@@ -1144,10 +1164,59 @@ body {
   color: #7db8fb;
 }
 
+/* Card header: numbered rule name as the title, status as a label beside it.
+   The row wraps, so the status drops under the title if the panel is narrow. */
+.finding-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+  margin-bottom: 4px;
+}
+
+.finding .finding-title {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #e6e6e6;
+}
+
+.finding-number {
+  flex: none;
+  color: #e6e6e6;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
 .finding-status {
   display: inline-flex;
   align-items: center;
+  flex: none;
   gap: 5px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* The number and title stay neutral (#e6e6e6, about 12:1 on the card). Only the
+   status label takes the status colour. These are lighter than the border and
+   icon colours because those fall below 4.5:1 as text. On the card background
+   #1a2230 (hover #202b3c): pass 8.4:1 (7.5), fail 7.0:1 (6.3), unknown 9.4:1
+   (8.4). Status is also carried by the icon and the word. */
+.finding.pass .finding-status {
+  color: #5fd197;
+}
+
+.finding.fail .finding-status {
+  color: #ff8a8a;
+}
+
+.finding.unknown .finding-status {
+  color: #e6c44f;
 }
 
 .finding-status-icon {
