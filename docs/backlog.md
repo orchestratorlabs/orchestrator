@@ -645,6 +645,69 @@ indistinguishable from a 100 meaning "this is correct." Options: surface an
 explicit "not fully evaluated" state instead of a number, or cap the score when a
 high-severity rule could not be checked.
 
+### 3.8 Consolidate OrchestratoR RAG into a single source of truth
+
+**Planned — architectural cleanup, not required for current Button thin-slice.**
+Recorded 2026-10-15. **No refactor has been done**; this is to be implemented as
+a separate, controlled change.
+
+**Current situation (as of `50e5fdd`):**
+
+- `docs/orchestrator_button_health_score_rag.txt` is the authoritative source
+  (AGENTS.md names it the source of truth).
+- `rag/orchestrator_button_health_score_rag.txt` is a runtime **duplicate**, and
+  `rag/orchestrator_rag_registry.txt` duplicates the registry. Both are currently
+  identical to their `docs/` counterparts.
+- `app.py` reads `rag/` (`RAG_DIR`) for Ask OrchestratoR, the Claude summary, and
+  the RAG listing endpoint.
+- A11Y DoubleCheck already reads its four source files from `docs/`.
+- The frontend deterministic evaluator is implemented separately, with its rules
+  and deductions hard-coded in `buttonEvaluator.ts`. This is a third
+  representation of the same rules.
+
+**Approved direction (Craig, 2026-10-15):**
+
+```text
+docs/
+→ single RAG source of truth
+→ app.py reads explicit approved files from docs/
+→ DoubleCheck continues reading from docs/
+→ duplicate rag/ files are eventually removed
+```
+
+**Scope when implemented:**
+
+- Remove the duplicate `rag/` RAG and registry files.
+- Use `docs/` as the canonical source.
+- Update `app.py` to read an **explicit approved file list** from `docs/`, not a
+  blind glob of every `.txt` file. `docs/` holds six `.txt` files today, and the
+  RAG listing endpoint currently globs a whole directory.
+- Preserve current A11Y DoubleCheck behaviour.
+- Add **drift-detection tests**, including a test that validates the RAG
+  deduction values against the `RULES` configuration in `buttonEvaluator.ts`.
+- **Verify deployment compatibility before deleting the duplicates.**
+
+**Rejected for now:** a symlink (fragile on Windows and in zip downloads, and it
+hides the duplication) and a copy step (keeps two real files, so it still needs a
+drift guard).
+
+### 3.9 React live-preview synchronous root unmount warning
+
+**Investigate separately — do not mix with accessibility scoring work.**
+Recorded 2026-10-15. **No live-preview code has been changed.**
+
+Observed behaviour:
+
+- A React console warning appeared once while typing in the code editor:
+  *"Attempted to synchronously unmount a root while React was already rendering.
+  React cannot finish unmounting the root until the current render has completed,
+  which may lead to a race condition."*
+- It appears related to the live-preview area.
+- It was not introduced or modified by the Rule 10 / N/A work, which does not
+  touch the preview code.
+- It is **unknown whether it predates** the current changes. Reproduce it against
+  an older build before drawing a conclusion.
+
 ## 4. If the Python backend is ever hosted
 
 None of these matter while `app.py` runs on localhost. All of them matter the
