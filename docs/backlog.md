@@ -333,26 +333,33 @@ silently override them (see the §3.2 tension below).
 
 **Refined scope — four parts, in this order:**
 
-1. **Docs first (done 2026-10-15, uncommitted).** RAG v3.1 (Rule 2 icon branches,
+1. **Docs first — DONE 2026-10-15** (`a5a3c5f`). RAG v3.1 (Rule 2 icon branches,
    new Rule 10, N/A scoring), `mvp_scoring_policy.md`, `AGENTS.md`, and the
    prompt, wireframe, and README status lists. New and changed rules are marked
    **pending SME review**.
-2. **Not Applicable status.** Add `"Not Applicable"` to `RuleStatus`; exclude it
-   from both sides of the score; sort it after Pass; render it as a muted card
-   with a fourth indicator colour that passes 4.5:1 contrast; carry it through
-   the exported report and the Claude payload.
-3. **`rule-10-aria-semantics` / "ARIA Semantics" — narrowed to one question: is
-   the button role exposed to assistive technology?**
-   - Native `<button>` → **Not Applicable** (implicit role)
+2. **Not Applicable status — DONE 2026-10-15.** `"N/A"` added to `RuleStatus`;
+   no deduction and outside both sides of the score; sorted after Pass; muted
+   card with a grey stripe, not clickable; carried through the report, the
+   local summary, the Claude payload, and the backend all-pass check.
+3. **`rule-10-aria-semantics` / "ARIA Semantics" — DONE 2026-10-15, -10
+   PROVISIONAL.** One question: is the button role exposed to assistive
+   technology?
+   - Native `<button>` → **Not Applicable** (implicit role). A redundant
+     `role="button"` is still N/A and is noted, not penalised.
    - Non-native element with `role="button"` → Pass
-   - Non-native element without `role` → Fail, Critical
-   - No element found → Unknown
-4. **Rule 2 (Accessible Name) gains real icon detection.** Branches: visible text
-   → Pass; text + `aria-hidden` icon → Pass; icon-only + name → Pass; icon-only
-   + no name → Fail; unclassifiable icon → Unknown. "No icon exists" is recorded
-   in Rule 2's evidence line, not as a separate N/A card, so the default sample
-   shows one N/A rather than two. N/A is returned only when no icon candidate is
-   found in markup or CSS.
+   - Non-native element without `role`, or with another role → Fail, Critical
+   - Native `<button>` with a contradicting role (`role="link"`) → Fail
+     (**added during the build; SME to confirm**)
+   - No element found, or a role set from an expression or spread props →
+     Unknown
+4. **Rule 2 icon evidence — PARTLY DONE.** Rule 2's status logic is unchanged
+   (-25, Critical). Its evidence now records "Icon-specific check: N/A" when no
+   icon candidate is found in markup or CSS. **Not built:** classifying a
+   decorative `aria-hidden` icon, and returning Unknown for an icon that cannot
+   be classified. Those are the documented target, pending SME review.
+5. **Tests — DONE.** `npm test` (Node's built-in runner via `tsx`, files in
+   `tests/`). 29 tests cover the six requested cases, the 85 / 100 baseline,
+   Rule 2's -25, Rule 10's -10, and the N/A edge cases.
 
 **Open decisions:**
 

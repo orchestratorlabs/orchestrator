@@ -87,6 +87,16 @@ const RULES: RuleDefinition[] = [
     sourceReference: "orchestrator_button_health_score_rag.txt Rule 9",
     defaultSeverity: "Medium",
     deduction: 5
+  },
+  {
+    // PROVISIONAL: the -10 deduction is pending Accessibility SME review. See
+    // docs/ARIA-Score/ARIA_Score.md. Kept separate from Rule 2, whose -25 is unchanged.
+    ruleId: "rule-10-aria-semantics",
+    ruleName: "ARIA Semantics",
+    sourceReference:
+      "WCAG 4.1.2 Name, Role, Value · orchestrator_button_health_score_rag.txt Rule 10 · docs/ARIA-Score/ARIA_Score.md",
+    defaultSeverity: "Critical",
+    deduction: 10
   }
 ];
 
@@ -95,6 +105,26 @@ function createPass(rule: RuleDefinition, evidence: string, recommendation = "No
     ruleId: rule.ruleId,
     ruleName: rule.ruleName,
     status: "Pass",
+    evidence,
+    severity: "Low",
+    recommendation,
+    sourceReference: rule.sourceReference
+  };
+}
+
+/**
+ * Not Applicable: the rule verifiably does not apply to this component. Callers
+ * must have positively established that, "nothing found" is Unknown, not N/A.
+ */
+function createNotApplicable(
+  rule: RuleDefinition,
+  evidence: string,
+  recommendation = "No change needed."
+): RuleResult {
+  return {
+    ruleId: rule.ruleId,
+    ruleName: rule.ruleName,
+    status: "N/A",
     evidence,
     severity: "Low",
     recommendation,
@@ -178,8 +208,12 @@ function buildSummary(findings: RuleResult[], score: number): string {
   const failCount = findings.filter((f) => f.status === "Fail").length;
   const unknownCount = findings.filter((f) => f.status === "Unknown").length;
 
+  const notApplicableCount = findings.filter((f) => f.status === "N/A").length;
+
   if (failCount === 0 && unknownCount === 0) {
-    return `All ${passCount} rules passed. Ready to ship.`;
+    return notApplicableCount > 0
+      ? `All ${passCount} applicable rules passed (${notApplicableCount} not applicable). Ready to ship.`
+      : `All ${passCount} rules passed. Ready to ship.`;
   }
 
   if (unknownCount > 0) {
@@ -191,7 +225,7 @@ function buildSummary(findings: RuleResult[], score: number): string {
 
 function buildFixes(findings: RuleResult[]): string[] {
   const actionable = findings
-    .filter((f) => f.status !== "Pass")
+    .filter((f) => f.status === "Fail" || f.status === "Unknown")
     .map((f) => f.recommendation)
     .filter((value, index, array) => array.indexOf(value) === index);
 
@@ -200,6 +234,73 @@ function buildFixes(findings: RuleResult[]): string[] {
   }
 
   return actionable;
+}
+
+/**
+ * Returns the opening tag that starts at `start` (the index of its "<"). Quote- and
+ * brace-aware, so the ">" in an arrow function or a JSX expression does not end
+ * the tag early.
+ */
+function readOpeningTag(code: string, start: number): string {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = start; i < code.length; i += 1) {
+    const ch = code[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+    } else if (ch === "{") {
+      depth += 1;
+    } else if (ch === "}") {
+      depth = Math.max(0, depth - 1);
+    } else if (ch === ">" && depth === 0) {
+      return code.slice(start, i + 1);
+    }
+  }
+  return code.slice(start);
+}
+
+type RoleAttribute =
+  | { kind: "absent" }
+  | { kind: "literal"; value: string }
+  | { kind: "dynamic" };
+
+/** Reads an explicit `role` attribute from an opening tag. An empty role is ignored by browsers, so it counts as absent. */
+function readRoleAttribute(openingTag: string): RoleAttribute {
+  const match = openingTag.match(
+    /(?:^|\s)role\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^"]*)"|'([^']*)')\s*\}|(\{))/
+  );
+  if (!match) return { kind: "absent" };
+  if (match[5]) return { kind: "dynamic" };
+  const value = (match[1] ?? match[2] ?? match[3] ?? match[4] ?? "").trim().toLowerCase();
+  return value === "" ? { kind: "absent" } : { kind: "literal", value };
+}
+
+/** The first <div>/<span> opening tag that carries an onClick handler, i.e. the element used as a button. */
+function findClickableNonNativeTag(code: string): { name: string; tag: string } | null {
+  const pattern = /<(div|span)\b/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(code)) !== null) {
+    const tag = readOpeningTag(code, match.index);
+    if (/\bonClick\s*=/.test(tag)) {
+      return { name: match[1], tag };
+    }
+  }
+  return null;
+}
+
+/**
+ * Whether the button markup or CSS contains something that could be an icon: an
+ * <svg>, <img>, <i>, an Icon-named component, or a CSS-generated icon. Used only
+ * to word Rule 2's evidence. It never changes Rule 2's status.
+ */
+function hasIconCandidate(buttonMarkup: string, cssCode: string): boolean {
+  if (/<(?:svg|img|i)\b/.test(buttonMarkup)) return true;
+  if (/<[A-Za-z0-9_.]*Icon\b/.test(buttonMarkup)) return true;
+  return /::?(?:before|after)\s*\{[^}]*\bcontent\s*:\s*(?!["']{2}\s*[;}]|none)/.test(cssCode);
 }
 
 export function evaluateButtonAccessibility(reactCode: string, rawCssCode: string): EvaluationResult {
@@ -253,12 +354,17 @@ export function evaluateButtonAccessibility(reactCode: string, rawCssCode: strin
     const hasAriaLabelledBy = /aria-labelledby\s*=/.test(buttonMarkup);
     const hasLabelText = hasVisibleTextLabel(buttonMarkup);
     if (hasAriaName || hasAriaLabelledBy || hasLabelText) {
+      // Evidence wording only: the icon sub-check is Not Applicable when no icon
+      // exists. Rule 2's own status and deduction come from the branches above.
+      const iconNote = hasIconCandidate(buttonMarkup, cssCode)
+        ? ""
+        : " Icon-specific check: N/A — no icon-only state exists (no icon detected).";
       findings.push(
         createPass(
           RULES[1],
-          hasAriaName || hasAriaLabelledBy
+          (hasAriaName || hasAriaLabelledBy
             ? "Detected aria-label/aria-labelledby on button."
-            : "Detected visible button label text within the button content."
+            : "Detected visible button label text within the button content.") + iconNote
         )
       );
     } else {
@@ -561,6 +667,84 @@ export function evaluateButtonAccessibility(reactCode: string, rawCssCode: strin
         "Verify rendered default, hover, focus, active, and disabled states and add missing definitions."
       )
     );
+  }
+
+  // Rule 10: ARIA semantics (provisional, pending Accessibility SME review).
+  //
+  // Native HTML first. "Is ARIA required?" is decided before anything is scored:
+  // a native <button> already exposes the button role, so the rule is Not
+  // Applicable. That is NOT the same as "no ARIA attribute was found". Only a
+  // non-native element used as a button needs role="button".
+  if (buttonTagMatch) {
+    const nativeTag = readOpeningTag(reactCode, buttonTagMatch.index ?? 0);
+    const role = readRoleAttribute(nativeTag);
+    if (role.kind === "literal" && role.value !== "button") {
+      findings.push(
+        createFail(
+          RULES[9],
+          `Native <button> has role="${role.value}", which contradicts its implicit button role.`,
+          "Remove the role attribute so the native button role applies, or use an element that matches the intended role."
+        )
+      );
+    } else if (role.kind === "dynamic") {
+      findings.push(
+        createUnknown(
+          RULES[9],
+          "Native <button> has a role set from an expression, so whether it contradicts the button role cannot be verified from the code.",
+          "Use a literal role value, or remove the role so the native button role applies."
+        )
+      );
+    } else {
+      findings.push(
+        createNotApplicable(
+          RULES[9],
+          role.kind === "literal"
+            ? 'Native button semantics already provide the required role. Additional ARIA semantics are not required for this use case. The explicit role="button" is redundant.'
+            : "Native button semantics already provide the required role. Additional ARIA semantics are not required for this use case."
+        )
+      );
+    }
+  } else {
+    const clickable = findClickableNonNativeTag(reactCode);
+    if (!clickable) {
+      findings.push(
+        createUnknown(
+          RULES[9],
+          "Whether ARIA is required cannot be determined because no button element was found in the provided code snippet.",
+          "Provide the button markup so ARIA applicability can be determined."
+        )
+      );
+    } else {
+      const role = readRoleAttribute(clickable.tag);
+      const hasSpread = /\{\s*\.\.\./.test(clickable.tag);
+      const label = `<${clickable.name}>`;
+      if (role.kind === "literal" && role.value === "button") {
+        findings.push(
+          createPass(
+            RULES[9],
+            `Non-native ${label} element used as a button carries role="button", so assistive technology can identify it. Native markup and keyboard operability are evaluated separately by Rules 1 and 3.`
+          )
+        );
+      } else if (role.kind === "dynamic" || (role.kind === "absent" && hasSpread)) {
+        findings.push(
+          createUnknown(
+            RULES[9],
+            `Non-native ${label} element used as a button sets its role from an expression or spread props, so role="button" cannot be verified from the code.`,
+            'Set a literal role="button", or use a native <button type="button"> element.'
+          )
+        );
+      } else {
+        findings.push(
+          createFail(
+            RULES[9],
+            role.kind === "literal"
+              ? `Non-native ${label} element used as a button has role="${role.value}" instead of role="button", so assistive technology cannot identify it as a button.`
+              : `Non-native ${label} element used as a button is missing role="button", so assistive technology has no way to identify it as an interactive control.`,
+            'Add role="button" to the element, or use a native <button type="button"> instead.'
+          )
+        );
+      }
+    }
   }
 
   const hasRagWeightsForAllFailRules = findings

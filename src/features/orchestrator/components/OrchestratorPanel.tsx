@@ -60,7 +60,17 @@ const STATUS_CLASS: Record<A11yDoubleCheckResult["status"], string> = {
  */
 const EMPTY_QUESTION_MESSAGE = "You need to first ask a question, then Submit";
 
-const FINDING_PANEL_SORT_ORDER: Record<string, number> = { Fail: 0, Unknown: 1, Pass: 2 };
+const FINDING_PANEL_SORT_ORDER: Record<string, number> = { Fail: 0, Unknown: 1, Pass: 2, "N/A": 3 };
+
+/** CSS-safe class name for a status ("N/A" is not a valid class name to select on). */
+function statusClassName(status: EvaluationResult["findings"][number]["status"]) {
+  return status === "N/A" ? "not-applicable" : status.toLowerCase();
+}
+
+/** The text shown for a status. Not Applicable is spelled out so "N/A" is never ambiguous. */
+function statusLabel(status: EvaluationResult["findings"][number]["status"]) {
+  return status === "N/A" ? "N/A — Not Applicable" : status;
+}
 
 /**
  * The order findings are shown in the panel. Shared with the exported report so
@@ -98,6 +108,8 @@ export function OrchestratorPanel({
   const unknownCount =
     evaluationResult?.findings.filter((finding) => finding.status === "Unknown").length ?? 0;
   const failCount = evaluationResult?.findings.filter((finding) => finding.status === "Fail").length ?? 0;
+  const notApplicableCount =
+    evaluationResult?.findings.filter((finding) => finding.status === "N/A").length ?? 0;
 
   /**
    * Stands in for the Claude-written summary when the local Flask service is
@@ -167,6 +179,7 @@ export function OrchestratorPanel({
     const passCount = result.findings.filter((f) => f.status === "Pass").length;
     const unknownCount = result.findings.filter((f) => f.status === "Unknown").length;
     const failCount = result.findings.filter((f) => f.status === "Fail").length;
+    const notApplicableCount = result.findings.filter((f) => f.status === "N/A").length;
     // Numbered in the panel's display order so "finding 3" means the same
     // finding in the report and on screen. Continuation lines are indented to
     // the width of the list marker so they stay part of the list item.
@@ -180,7 +193,9 @@ export function OrchestratorPanel({
     return [
       `## ${label}`,
       "",
-      `Score: ${result.healthScore}/100 (${passCount} pass, ${unknownCount} unknown, ${failCount} fail)`,
+      `Score: ${result.healthScore}/100 (${passCount} pass, ${unknownCount} unknown, ${failCount} fail${
+        notApplicableCount > 0 ? `, ${notApplicableCount} N/A` : ""
+      })`,
       "",
       "### Findings",
       ...(findingLines.length ? findingLines : ["- No findings recorded."]),
@@ -531,6 +546,12 @@ export function OrchestratorPanel({
                   <span className="status-dot fail" aria-hidden="true" />
                   Fail: {failCount}
                 </li>
+                {notApplicableCount > 0 && (
+                  <li>
+                    <span className="status-dot not-applicable" aria-hidden="true" />
+                    N/A: {notApplicableCount}
+                  </li>
+                )}
               </ul>
             )}
           </div>
@@ -677,7 +698,7 @@ export function OrchestratorPanel({
             {sortedFindings.map((finding, index) => (
               <li
                 key={finding.ruleId}
-                className={`finding ${finding.status.toLowerCase()} ${
+                className={`finding ${statusClassName(finding.status)} ${
                   finding.ruleId === selectedFindingRuleId ? "selected" : ""
                 } ${finding.status === "Fail" || finding.status === "Unknown" ? "inspectable" : ""}`}
                 role={finding.status === "Fail" || finding.status === "Unknown" ? "button" : undefined}
@@ -720,7 +741,12 @@ export function OrchestratorPanel({
                         !
                       </span>
                     )}
-                    {finding.status}
+                    {finding.status === "N/A" && (
+                      <span className="finding-status-icon not-applicable" aria-hidden="true">
+                        –
+                      </span>
+                    )}
+                    {statusLabel(finding.status)}
                   </strong>
                 </div>
                 <p className="muted">{finding.evidence}</p>
@@ -748,6 +774,12 @@ export function OrchestratorPanel({
                 !
               </span>
               Fail - verified and not compliant
+            </li>
+            <li>
+              <span className="finding-status-icon not-applicable" aria-hidden="true">
+                –
+              </span>
+              N/A - does not apply to this component
             </li>
           </ul>
         )}

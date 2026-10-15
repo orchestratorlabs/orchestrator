@@ -1,4 +1,10 @@
-export type RuleStatus = "Pass" | "Unknown" | "Fail";
+/**
+ * "N/A" (Not Applicable) means the rule verifiably does not apply to this
+ * component, for example the ARIA role rule on a native <button>. It is set only
+ * by the evaluator's own logic, deducts nothing, and is never counted as a Pass,
+ * Fail, or Unknown. See docs/mvp_scoring_policy.md.
+ */
+export type RuleStatus = "Pass" | "N/A" | "Unknown" | "Fail";
 
 export interface A11yVerifiedItem {
   criterion: string;

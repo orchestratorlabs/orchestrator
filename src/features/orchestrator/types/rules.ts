@@ -6,7 +6,7 @@ export interface RagRegistryRule {
   sourceReference: string;
 }
 
-export const ORDERED_FINDING_STATUS: RuleStatus[] = ["Pass", "Unknown", "Fail"];
+export const ORDERED_FINDING_STATUS: RuleStatus[] = ["Pass", "N/A", "Unknown", "Fail"];
 
 export function orderFindingsForMvp(
   findings: RuleResult[],

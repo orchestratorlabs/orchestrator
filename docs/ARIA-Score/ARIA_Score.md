@@ -27,7 +27,7 @@ The deduction on a Fail belongs to the **rule**, not to the word "ARIA". Two rul
 | Rule | Question it answers | Fail deduction | Severity | Status |
 |---|---|---:|---|---|
 | **Rule 2 — Accessible Name** | Does the button have a programmatically determinable name (visible text, `aria-label`, `aria-labelledby`)? | **-25** | Critical | Established in RAG v3 and the evaluator. Unchanged. |
-| **Rule 10 — ARIA Semantics** | Is the button role exposed to assistive technology on a non-native element (`role="button"`)? | **-10** | Critical | **PROVISIONAL** — pending Accessibility SME review. Not yet implemented in the evaluator. |
+| **Rule 10 — ARIA Semantics** | Is the button role exposed to assistive technology on a non-native element (`role="button"`)? | **-10** | Critical | **PROVISIONAL** — pending Accessibility SME review. Implemented in the evaluator 2026-10-15 (`rule-10-aria-semantics`). |
 
 Rule 2 and Rule 10 are kept separate. A missing accessible name is a Rule 2 failure at -25. It is **not** reclassified as a -10 ARIA failure.
 

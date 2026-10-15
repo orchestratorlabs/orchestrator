@@ -898,6 +898,10 @@ body {
   background: #e45858;
 }
 
+.status-dot.not-applicable {
+  background: #6b7688;
+}
+
 .score-summary {
   margin: 10px 0 0;
 }
@@ -1219,6 +1223,11 @@ body {
   color: #e6c44f;
 }
 
+/* Muted grey, #9aa6ba is 6.5:1 on the card (5.8:1 on hover). */
+.finding.not-applicable .finding-status {
+  color: var(--muted);
+}
+
 .finding-status-icon {
   width: 14px;
   height: 14px;
@@ -1241,6 +1250,12 @@ body {
   background: rgba(201, 162, 39, 0.18);
   border: 1px solid rgba(201, 162, 39, 0.75);
   color: #ecd58b;
+}
+
+.finding-status-icon.not-applicable {
+  background: rgba(154, 166, 186, 0.16);
+  border: 1px solid rgba(154, 166, 186, 0.6);
+  color: #c7d0de;
 }
 
 .finding-status-icon.fail {
@@ -1294,6 +1309,11 @@ body {
 
 .finding.fail {
   border-left: 3px solid #e45858;
+}
+
+/* Not Applicable is informational: a neutral stripe, and not inspectable. */
+.finding.not-applicable {
+  border-left: 3px solid #6b7688;
 }
 
 .panel-actions {

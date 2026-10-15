@@ -81,8 +81,12 @@ export function buildLocalScoreSummary(
   const unverified = findings.filter((f) => f.status === "Unknown");
   const modeLabel = evaluatedMode === "dark" ? "Dark mode" : "Light mode";
 
+  // Not Applicable rules are neither passed nor failed, so they stay out of the
+  // counts below. Counting them would present an N/A as a successful rule.
+  const applicableCount = findings.filter((f) => f.status !== "N/A").length;
+
   if (!failing.length && !unverified.length) {
-    return `${modeLabel} button passes all ${findings.length} accessibility rules with a perfect score.`;
+    return `${modeLabel} button passes all ${applicableCount} applicable accessibility rules with a perfect score.`;
   }
 
   // The seeded sample's single failure. WCAG 1.4.3 exempts disabled controls
@@ -105,8 +109,8 @@ export function buildLocalScoreSummary(
     );
   }
 
-  const passing = findings.length - failing.length - unverified.length;
-  const parts = [`${modeLabel} button passes ${passing} of ${findings.length} accessibility rules.`];
+  const passing = findings.filter((f) => f.status === "Pass").length;
+  const parts = [`${modeLabel} button passes ${passing} of ${applicableCount} applicable accessibility rules.`];
 
   if (failing.length) {
     parts.push(

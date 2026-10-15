@@ -172,6 +172,8 @@ export function App() {
   const passCount = result.findings.filter((f) => f.status === "Pass").length;
   const failCount = result.findings.filter((f) => f.status === "Fail").length;
   const unknownCount = result.unknownCount;
+  const notApplicableCount = result.findings.filter((f) => f.status === "N/A").length;
+  const naSuffix = notApplicableCount > 0 ? `, ${notApplicableCount} N/A` : "";
   const scoreValue = result.healthScore;
 
   setEvaluationResult(result);
@@ -183,7 +185,7 @@ export function App() {
   setEvaluatedMode(currentMode);
   setEvaluationSignature(newSignature);
   setEvaluationStateMessage(
-    `Complete: ${scoreValue}/100 — ${passCount} pass, ${unknownCount} unknown, ${failCount} fail.`
+    `Complete: ${scoreValue}/100 — ${passCount} pass, ${unknownCount} unknown, ${failCount} fail${naSuffix}.`
   );
   setIsEvaluating(false);
 
@@ -201,13 +203,14 @@ export function App() {
       body: JSON.stringify({
         question: "Summarize the accessibility health result for this component.",
         useClaude: true,
-        componentContext: `Score: ${scoreValue}/100 — ${passCount} pass, ${unknownCount} unknown, ${failCount} fail.`,
+        componentContext: `Score: ${scoreValue}/100 — ${passCount} pass, ${unknownCount} unknown, ${failCount} fail${naSuffix}.`,
         evaluationContext: {
           evaluatedMode: currentMode,
           score: scoreValue,
           passCount,
           unknownCount,
           failCount,
+          notApplicableCount,
           findings: result.findings,
         },
       }),
