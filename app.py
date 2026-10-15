@@ -848,15 +848,23 @@ def build_a11y_doublecheck_prompt(payload, rag_contents, selected_sources, web_l
     selected_rule_id = (payload.get("selectedFindingRuleId") or "").strip()
     evaluation_context = payload.get("evaluationContext") or {}
 
-    # Detect all-pass case: every finding in the payload has status "Pass"
+    # Detect all-pass case: every applicable finding in the payload has status "Pass".
+    # "N/A" (Not Applicable) findings are set by the evaluator's own logic and are
+    # neither a pass nor a failure, so they are left out of the check. Without this,
+    # a clean component with one N/A rule would stop being recognised as all-pass.
     try:
         findings_list = json.loads(findings_raw) if findings_raw else []
-        all_pass = bool(findings_list) and all(
-            (f.get("status") or "").lower() == "pass" for f in findings_list
+        applicable_findings = [
+            f for f in findings_list if (f.get("status") or "").lower() != "n/a"
+        ]
+        all_pass = bool(applicable_findings) and all(
+            (f.get("status") or "").lower() == "pass" for f in applicable_findings
         )
+        has_not_applicable = len(applicable_findings) != len(findings_list)
     except (json.JSONDecodeError, AttributeError):
         findings_list = []
         all_pass = False
+        has_not_applicable = False
 
     sources_list = "\n".join(f"  - {s}" for s in selected_sources)
     web_evidence_lines = []
@@ -900,6 +908,14 @@ Determine the category of the current finding:
   - If the finding is about NAME/ROLE/VALUE or ARIA: validate WCAG 4.1.2 only.
     Do NOT validate contrast or keyboard criteria.
   - If the finding covers multiple specific criteria, validate only those specific criteria."""
+
+    if has_not_applicable:
+        scope_rule += """
+
+NOT APPLICABLE FINDINGS:
+Findings with status N/A (Not Applicable) were decided by OrchestratoR's predefined evaluator logic:
+the rule does not apply to this component. Do not treat N/A as a failure or as a pass, and do not
+override it. You may explain it."""
 
     return f"""You are the A11Y DoubleCheck Agent for OrchestratoR.
 
