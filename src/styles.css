@@ -1255,8 +1255,23 @@ body {
 }
 
 .finding.inspectable:hover {
-  border-color: #3f5169;
+  /* Only the top, right and bottom edges change. The left edge is the status
+     stripe (red/amber), and it must keep its colour while hovered. */
+  border-top-color: #3f5169;
+  border-right-color: #3f5169;
+  border-bottom-color: #3f5169;
   background: #202b3c;
+}
+
+/* The status stripe dims about 25% on hover, so it reads as part of the hover
+   effect while still showing which status the card has. Pass cards are not
+   inspectable, so they have no hover state. */
+.finding.fail.inspectable:hover {
+  border-left-color: #b34d51;
+}
+
+.finding.unknown.inspectable:hover {
+  border-left-color: #9f842c;
 }
 
 .finding.inspectable:focus-visible {
