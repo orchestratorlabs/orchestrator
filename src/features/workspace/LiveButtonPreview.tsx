@@ -212,7 +212,7 @@ function PreviewContent({
   if (!hasLoadedCode) {
     return (
       <div className="preview-empty">
-        Select "Load Component Code" to preview and inspect the component.
+        Select ‘Load Component Code’ to preview and inspect it for accessibility.
       </div>
     );
   }
