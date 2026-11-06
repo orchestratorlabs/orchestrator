@@ -3,6 +3,28 @@ import type { A11yDoubleCheckResult, EvaluationResult } from "../types/evaluatio
 import orchestratorLogo from "../../../assets/orchestrator-logo.png";
 import { BACKEND_ORIGIN, IS_BACKEND_REACHABLE } from "../backend";
 import { buildLocalScoreSummary, buildNeedsVerification } from "../localScoreSummary";
+import { DEMO_REVIEWER_LABEL } from "../demoReviewer";
+import {
+  THEME_LABEL,
+  buildDoubleCheckDisplay,
+  describeCssSource,
+  isDoubleCheckCurrent,
+  themeSectionTag,
+  type DoubleCheckSnapshot,
+  type EvaluationInputs,
+  type ThemeMode,
+} from "../doubleCheckReadiness";
+import {
+  createObservationState,
+  formatObservationsSection,
+  formatStamp,
+  interactionChipText,
+  setNote,
+  setOutcome,
+  type CheckId,
+  type CheckOutcome,
+} from "../interactionObservations";
+import { InteractionPreviewDialog } from "./InteractionPreviewDialog";
 
 interface OrchestratorPanelProps {
   isOpen: boolean;
@@ -19,6 +41,14 @@ interface OrchestratorPanelProps {
   doubleCheckEvaluationSignature: string | null;
   claudeSummary: string | null;
   isClaudeSummaryLoading: boolean;
+  previewTheme: ThemeMode;
+  /** Live inputs for each theme, used to tell a current cached result from a previous one. */
+  currentInputsByTheme: Record<ThemeMode, EvaluationInputs>;
+  doubleCheckSnapshot: DoubleCheckSnapshot | null;
+  lightResultInputs: EvaluationInputs | null;
+  darkResultInputs: EvaluationInputs | null;
+  isDoubleChecking: boolean;
+  onRunDoubleCheckAll: () => void;
 }
 
 /**
@@ -99,6 +129,13 @@ export function OrchestratorPanel({
   doubleCheckEvaluationSignature,
   claudeSummary,
   isClaudeSummaryLoading,
+  previewTheme,
+  currentInputsByTheme,
+  doubleCheckSnapshot,
+  lightResultInputs,
+  darkResultInputs,
+  isDoubleChecking,
+  onRunDoubleCheckAll,
 }: OrchestratorPanelProps) {
   const healthScore = evaluationResult?.healthScore ?? 0;
   const scoreRatio = Math.max(0, Math.min(healthScore, 100)) / 100;
@@ -136,19 +173,65 @@ export function OrchestratorPanel({
     [evaluationResult]
   );
 
+  // A DoubleCheck result is current only if no Evaluate rerun or theme switch has
+  // happened AND the inputs it ran against still equal the live inputs (no edit).
   const isDoubleCheckStale =
     a11yDoubleCheckResult !== null &&
-    doubleCheckEvaluationSignature !== evaluationSignature;
+    !isDoubleCheckCurrent({
+      evaluationSignature,
+      doubleCheckEvaluationSignature,
+      snapshot: doubleCheckSnapshot,
+      currentInputs: currentInputsByTheme[previewTheme],
+    });
 
-  const [approvedAt, setApprovedAt] = useState<string | null>(null);
+  /**
+   * What the card claims, derived from the snapshot of what was actually sent to
+   * DoubleCheck. The raw model response (including its own summary and "ship
+   * readiness") stays untouched in `a11yDoubleCheckResult` for debugging; it is not
+   * what the reviewer reads.
+   */
+  const display = useMemo(
+    () =>
+      a11yDoubleCheckResult && doubleCheckSnapshot && !isDoubleCheckStale
+        ? buildDoubleCheckDisplay(a11yDoubleCheckResult, doubleCheckSnapshot)
+        : null,
+    [a11yDoubleCheckResult, doubleCheckSnapshot, isDoubleCheckStale]
+  );
+
+  const [approval, setApproval] = useState<{
+    at: string;
+    theme: ThemeMode;
+    findingTotal: number;
+  } | null>(null);
+  const approvalRef = useRef(approval);
+  approvalRef.current = approval;
+  const [approvalCleared, setApprovalCleared] = useState(false);
+  const [observations, setObservations] = useState(createObservationState);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const previewTriggerRef = useRef<HTMLButtonElement>(null);
   const approveSectionRef = useRef<HTMLDivElement>(null);
 
+  // A new DoubleCheck result starts clean: no approval, no observations.
   useEffect(() => {
-    setApprovedAt(null);
+    setApproval(null);
+    setApprovalCleared(false);
+    setObservations(createObservationState());
+    setIsPreviewOpen(false);
   }, [a11yDoubleCheckResult]);
 
+  // Going stale clears the approval and observations for good. Reverting an edit
+  // does not bring them back: an old observation must never read as evidence about
+  // a different version of the component.
   useEffect(() => {
-    if (!approvedAt) return;
+    if (!isDoubleCheckStale) return;
+    if (approvalRef.current) setApprovalCleared(true);
+    setApproval(null);
+    setObservations(createObservationState());
+    setIsPreviewOpen(false);
+  }, [isDoubleCheckStale]);
+
+  useEffect(() => {
+    if (!approval) return;
     // The panel footer (Push to Figma etc.) is position:sticky, so it visually
     // covers the bottom of the scroll area without shrinking it — scrollIntoView
     // alone doesn't know that and leaves the newly revealed button underneath it.
@@ -165,16 +248,49 @@ export function OrchestratorPanel({
       }
     });
     return () => cancelAnimationFrame(raf);
-  }, [approvedAt]);
+  }, [approval]);
 
-  const canApproveForShip =
-    a11yDoubleCheckResult?.status === "PASS" &&
-    a11yDoubleCheckResult.shipReadiness.toLowerCase().includes("ship ready") &&
-    a11yDoubleCheckResult.remainingRisks.length === 0;
+  /** Sign-off and export are only ever possible against a current, fully passing result. */
+  const canSignOff = display?.canApprove === true && !isDoubleCheckStale;
+  const canExport = canSignOff && approval !== null;
 
-  const formatThemeSection = (label: string, result: EvaluationResult | null) => {
+  const handleApprove = () => {
+    if (!canSignOff || !doubleCheckSnapshot) return;
+    setApproval({
+      at: formatStamp(new Date()),
+      theme: doubleCheckSnapshot.inputs.theme,
+      findingTotal: doubleCheckSnapshot.counts.total,
+    });
+  };
+
+  const handleOutcomeChange = (id: CheckId, outcome: CheckOutcome) =>
+    setObservations((prev) => setOutcome(prev, id, outcome, new Date()));
+  const handleNoteChange = (id: CheckId, note: string) =>
+    setObservations((prev) => setNote(prev, id, note, new Date()));
+
+  const closeInteractionPreview = () => {
+    setIsPreviewOpen(false);
+    // Native <dialog> restores focus itself; set it explicitly too so the return
+    // target is guaranteed to be the control that opened the preview.
+    requestAnimationFrame(() => previewTriggerRef.current?.focus());
+  };
+
+  const formatThemeSection = (
+    theme: ThemeMode,
+    result: EvaluationResult | null,
+    resultInputs: EvaluationInputs | null
+  ) => {
+    const label = THEME_LABEL[theme];
+    const tag = themeSectionTag({
+      theme,
+      hasResult: result !== null,
+      resultInputs,
+      currentInputs: currentInputsByTheme[theme],
+      approvedTheme: approval?.theme ?? null,
+    });
+    const heading = tag ? `## ${label} — ${tag}` : `## ${label}`;
     if (!result) {
-      return `## ${label}\n\nNot yet evaluated — switch to ${label.toLowerCase()} and run the accessibility check to include it.`;
+      return `${heading}\n\nNot yet evaluated — switch to ${label.toLowerCase()} and run the accessibility check to include it.`;
     }
     const passCount = result.findings.filter((f) => f.status === "Pass").length;
     const unknownCount = result.findings.filter((f) => f.status === "Unknown").length;
@@ -191,8 +307,9 @@ export function OrchestratorPanel({
     });
     const fixLines = result.recommendedFixes.map((fix) => `- ${fix}`);
     return [
-      `## ${label}`,
+      heading,
       "",
+      `CSS source: ${describeCssSource(theme)}.`,
       `Score: ${result.healthScore}/100 (${passCount} pass, ${unknownCount} unknown, ${failCount} fail${
         notApplicableCount > 0 ? `, ${notApplicableCount} N/A` : ""
       })`,
@@ -206,20 +323,27 @@ export function OrchestratorPanel({
   };
 
   const handleExportReport = () => {
+    // Defence in depth: the button is only rendered for a valid approval, but the
+    // handler refuses to run against a stale or unapproved result regardless.
+    if (!canExport || !approval) return;
+
     const now = new Date();
-    const stamp = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()} at ${now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+    const stamp = formatStamp(now);
     const componentName = loadedComponentName ?? "Component";
 
     const markdown = [
       "# OrchestratoR Accessibility Report",
       "",
       `Component: ${componentName}`,
-      `Approved by John Doe · Developer · ${approvedAt}`,
+      `Approved by ${DEMO_REVIEWER_LABEL} · ${approval.at}`,
+      `Approved scope: ${THEME_LABEL[approval.theme]} · all ${approval.findingTotal} evaluated findings`,
       `Report generated: ${stamp}`,
       "",
-      formatThemeSection("Light mode", lightResult),
+      formatThemeSection("light", lightResult, lightResultInputs),
       "",
-      formatThemeSection("Dark mode", darkResult),
+      formatThemeSection("dark", darkResult, darkResultInputs),
+      "",
+      formatObservationsSection({ state: observations, theme: approval.theme }),
       "",
       "---",
       "Generated by OrchestratoR",
@@ -349,22 +473,22 @@ export function OrchestratorPanel({
           <h3>A11Y DoubleCheck</h3>
 
           <div className="doublecheck-meta">
-            <span className="doublecheck-status doublecheck-status--stale">
-              Status: Needs Re-run
-            </span>
+            <span className="doublecheck-status doublecheck-status--stale">Needs re-run</span>
             <span className="doublecheck-confidence">
               Confidence: Previous result is out of date
-            </span>
-            <span className="doublecheck-ship">
-              Ship Readiness: Pending DoubleCheck
             </span>
           </div>
 
           <div className="doublecheck-section">
             <p className="doublecheck-label">Summary</p>
             <p className="doublecheck-body">
-              The component has changed since the last A11Y DoubleCheck. Run DoubleCheck again to validate the updated accessibility result before approving for ship.
+              The component code, CSS, or theme has changed since the last A11Y DoubleCheck. Run DoubleCheck again to validate the updated accessibility result before approving the component.
             </p>
+            {approvalCleared && (
+              <p className="doublecheck-body doublecheck-body--note">
+                Previous approval was cleared. Interaction preview notes and outcomes were cleared too.
+              </p>
+            )}
           </div>
 
           <div className="doublecheck-section">
@@ -374,32 +498,47 @@ export function OrchestratorPanel({
         </section>
       )}
 
-      {a11yDoubleCheckResult && !isDoubleCheckStale && (
+      {a11yDoubleCheckResult && display && doubleCheckSnapshot && !isDoubleCheckStale && (
         <section className={`panel-card doublecheck-card doublecheck-card--${a11yDoubleCheckResult.status.toLowerCase()}`}>
           <h3>A11Y DoubleCheck</h3>
 
           <div className="doublecheck-meta">
-            <span className={`doublecheck-status ${STATUS_CLASS[a11yDoubleCheckResult.status]}`}>
-              Status: {STATUS_LABEL[a11yDoubleCheckResult.status]}
-            </span>
+            {display.headlineKind === "default" ? (
+              <span className={`doublecheck-status ${STATUS_CLASS[a11yDoubleCheckResult.status]}`}>
+                Status: {STATUS_LABEL[a11yDoubleCheckResult.status]}
+              </span>
+            ) : (
+              <span
+                className={`doublecheck-status ${
+                  display.headlineKind === "review-incomplete"
+                    ? "doublecheck-status--partial"
+                    : "doublecheck-status--pass"
+                }`}
+              >
+                {display.headline}
+              </span>
+            )}
+            {display.extraChip && (
+              <span className="doublecheck-status doublecheck-status--partial">{display.extraChip}</span>
+            )}
             {a11yDoubleCheckResult.confidenceScore && (
               <span className="doublecheck-confidence">
                 Confidence: {a11yDoubleCheckResult.confidenceScore}%
               </span>
             )}
-            {a11yDoubleCheckResult.shipReadiness && (
+            {display.headlineKind === "default" && a11yDoubleCheckResult.shipReadiness && (
               <span className={`doublecheck-ship doublecheck-ship--${a11yDoubleCheckResult.status.toLowerCase()}`}>
                 Ship Readiness: {a11yDoubleCheckResult.shipReadiness}
               </span>
             )}
+            <span className="doublecheck-interaction-chip">{interactionChipText(observations)}</span>
           </div>
+          {display.caption && <p className="doublecheck-scope-caption">{display.caption}</p>}
 
-          {a11yDoubleCheckResult.summary && (
-            <div className="doublecheck-section">
-              <p className="doublecheck-label">Summary</p>
-              <p className="doublecheck-body">{a11yDoubleCheckResult.summary}</p>
-            </div>
-          )}
+          <div className="doublecheck-section">
+            <p className="doublecheck-label">Summary</p>
+            <p className="doublecheck-body">{display.summary}</p>
+          </div>
 
           {a11yDoubleCheckResult.sourcesChecked.length > 0 && (
             <div className="doublecheck-section">
@@ -449,20 +588,57 @@ export function OrchestratorPanel({
             )}
           </div>
 
-          {a11yDoubleCheckResult.recommendedNextStep && (
+          {display.showNextStep && (display.nextStep ?? a11yDoubleCheckResult.recommendedNextStep) && (
             <div className="doublecheck-section">
               <p className="doublecheck-label">Recommended Next Step</p>
-              <p className="doublecheck-body">{a11yDoubleCheckResult.recommendedNextStep}</p>
+              <p className="doublecheck-body">
+                {display.nextStep ?? a11yDoubleCheckResult.recommendedNextStep}
+              </p>
+              {display.showRunAll && (
+                <button
+                  type="button"
+                  className="doublecheck-runall-btn"
+                  onClick={onRunDoubleCheckAll}
+                  disabled={isDoubleChecking}
+                  aria-busy={isDoubleChecking}
+                >
+                  Run DoubleCheck on all findings
+                </button>
+              )}
             </div>
           )}
 
-          {canApproveForShip && (
+          <div className="doublecheck-section doublecheck-interaction">
+            <p className="doublecheck-label">Interaction preview (optional)</p>
+            <p className="doublecheck-body doublecheck-body--secondary">
+              Opens a local simulated save with a stand-in Button. Notes and outcomes are separate from the Health Score and component approval.
+            </p>
+            <button
+              ref={previewTriggerRef}
+              type="button"
+              className="doublecheck-preview-btn"
+              onClick={() => setIsPreviewOpen(true)}
+            >
+              Open interaction preview
+            </button>
+          </div>
+
+          {display.approvalNotice && display.approve === "hidden" && (
+            <div className="doublecheck-section">
+              <p className="doublecheck-body doublecheck-body--secondary">{display.approvalNotice}</p>
+            </div>
+          )}
+
+          {display.approve !== "hidden" && (
             <div className="doublecheck-section doublecheck-approve-section" ref={approveSectionRef}>
-              {approvedAt ? (
+              {approval && canSignOff ? (
                 <div className="doublecheck-approved">
                   <p className="doublecheck-approved-title">Component approved</p>
                   <p className="doublecheck-approved-meta">
-                    by John Doe · Developer · {approvedAt}
+                    by {DEMO_REVIEWER_LABEL} · {approval.at}
+                  </p>
+                  <p className="doublecheck-approved-meta">
+                    {THEME_LABEL[approval.theme]} · all {approval.findingTotal} evaluated findings
                   </p>
                   <button
                     type="button"
@@ -473,23 +649,45 @@ export function OrchestratorPanel({
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  className="doublecheck-approve-btn"
-                  onClick={() => {
-                    const now = new Date();
-                    const mm = String(now.getMonth() + 1).padStart(2, "0");
-                    const dd = String(now.getDate()).padStart(2, "0");
-                    const yyyy = now.getFullYear();
-                    const time = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-                    setApprovedAt(`${mm}/${dd}/${yyyy} at ${time}`);
-                  }}
-                >
-                  Approve Component
-                </button>
+                <>
+                  {display.approve === "enabled" ? (
+                    <p className="doublecheck-body doublecheck-body--secondary doublecheck-approve-scope">
+                      {display.approvalScopeLine}
+                    </p>
+                  ) : (
+                    <p
+                      id="doublecheck-approve-notice"
+                      className="doublecheck-body doublecheck-body--secondary doublecheck-approve-scope"
+                    >
+                      {display.approvalNotice}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="doublecheck-approve-btn"
+                    aria-disabled={display.approve === "unavailable"}
+                    aria-describedby={display.approve === "unavailable" ? "doublecheck-approve-notice" : undefined}
+                    onClick={() => {
+                      if (display.approve !== "enabled") return;
+                      handleApprove();
+                    }}
+                  >
+                    Approve Component
+                  </button>
+                </>
               )}
             </div>
           )}
+
+          <InteractionPreviewDialog
+            isOpen={isPreviewOpen}
+            onClose={closeInteractionPreview}
+            theme={doubleCheckSnapshot.inputs.theme}
+            effectiveCss={doubleCheckSnapshot.inputs.effectiveCss}
+            observations={observations}
+            onOutcomeChange={handleOutcomeChange}
+            onNoteChange={handleNoteChange}
+          />
         </section>
       )}
 

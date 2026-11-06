@@ -6,6 +6,15 @@ import { useState } from "react";
 import { evaluateButtonAccessibility } from "./features/orchestrator/evaluator/buttonEvaluator";
 import { BACKEND_ORIGIN, IS_BACKEND_REACHABLE } from "./features/orchestrator/backend";
 import type { A11yDoubleCheckResult, EvaluationResult } from "./features/orchestrator/types/evaluation";
+import {
+  buildDoubleCheckSnapshot,
+  buildEvaluationInputs,
+  checkDoubleCheckPreconditions,
+  type DoubleCheckScope,
+  type DoubleCheckSnapshot,
+  type EvaluationInputs,
+  type ThemeMode,
+} from "./features/orchestrator/doubleCheckReadiness";
 
 function parseA11yDoubleCheckXml(xmlString: string): A11yDoubleCheckResult | null {
   try {
@@ -75,6 +84,21 @@ export function App() {
   const [doubleCheckEvaluationSignature, setDoubleCheckEvaluationSignature] = useState<string | null>(null);
   const [claudeSummary, setClaudeSummary] = useState<string | null>(null);
   const [isClaudeSummaryLoading, setIsClaudeSummaryLoading] = useState(false);
+  // The inputs each cached evaluation was run against. `evaluationInputs` belongs to
+  // the result currently on screen; the per-theme pair lets the export tell a
+  // current theme result from a previous one.
+  const [evaluationInputs, setEvaluationInputs] = useState<EvaluationInputs | null>(null);
+  const [lightResultInputs, setLightResultInputs] = useState<EvaluationInputs | null>(null);
+  const [darkResultInputs, setDarkResultInputs] = useState<EvaluationInputs | null>(null);
+  // What the current DoubleCheck result was actually given: inputs, scope, counts.
+  const [doubleCheckSnapshot, setDoubleCheckSnapshot] = useState<DoubleCheckSnapshot | null>(null);
+
+  const inputsForTheme = (theme: ThemeMode): EvaluationInputs =>
+    buildEvaluationInputs(reactCode, cssCode, theme, SAMPLE_BUTTON_CSS_DARK);
+  const currentInputsByTheme: Record<ThemeMode, EvaluationInputs> = {
+    light: inputsForTheme("light"),
+    dark: inputsForTheme("dark"),
+  };
 
   const handlePreviewThemeChange = (theme: "light" | "dark") => {
     setPreviewTheme(theme);
@@ -82,6 +106,7 @@ export function App() {
     setSelectedFindingRuleId(null);
     setEvaluatedMode(null);
     setEvaluationSignature(null);
+    setEvaluationInputs(null);
     setClaudeSummary(null);
     setIsClaudeSummaryLoading(false);
     if (hasLoadedComponentCode) {
@@ -103,6 +128,10 @@ export function App() {
     setA11yDoubleCheckResult(null);
     setA11yDoubleCheckError(null);
     setDoubleCheckEvaluationSignature(null);
+    setDoubleCheckSnapshot(null);
+    setEvaluationInputs(null);
+    setLightResultInputs(null);
+    setDarkResultInputs(null);
   };
 
   const handleClearCode = () => {
@@ -156,7 +185,8 @@ export function App() {
 
   const currentReactCode = reactCode;
   const currentMode = previewTheme;
-  const currentCssCode = currentMode === "dark" ? SAMPLE_BUTTON_CSS_DARK : cssCode;
+  const runInputs = buildEvaluationInputs(currentReactCode, cssCode, currentMode, SAMPLE_BUTTON_CSS_DARK);
+  const currentCssCode = runInputs.effectiveCss;
   const newSignature = Date.now().toString();
 
   setIsEvaluating(true);
@@ -177,10 +207,13 @@ export function App() {
   const scoreValue = result.healthScore;
 
   setEvaluationResult(result);
+  setEvaluationInputs(runInputs);
   if (currentMode === "dark") {
     setDarkResult(result);
+    setDarkResultInputs(runInputs);
   } else {
     setLightResult(result);
+    setLightResultInputs(runInputs);
   }
   setEvaluatedMode(currentMode);
   setEvaluationSignature(newSignature);
@@ -225,17 +258,43 @@ export function App() {
   }
 };
 
-  const handleA11yDoubleCheck = async () => {
+  /**
+   * Runs A11Y DoubleCheck.
+   *  - "auto": the existing behaviour. A selected finding scopes the run to that one
+   *    finding; otherwise every evaluated finding is sent.
+   *  - "all": always sends every evaluated finding, ignoring (and not changing) the
+   *    finding selection, so editor highlights stay where they are.
+   */
+  const runA11yDoubleCheck = async (scopeRequest: "auto" | "all") => {
     if (!evaluationResult) return;
 
-    const currentCssCode = previewTheme === "dark" ? SAMPLE_BUTTON_CSS_DARK : cssCode;
+    const currentInputs = inputsForTheme(previewTheme);
+    const currentCssCode = currentInputs.effectiveCss;
 
-    const selectedFinding = selectedFindingRuleId
-      ? evaluationResult.findings.find((f) => f.ruleId === selectedFindingRuleId) ?? null
-      : null;
-    const findingsPayload = selectedFinding
-      ? JSON.stringify([selectedFinding])
-      : JSON.stringify(evaluationResult.findings);
+    // The findings sent below come from the last evaluation. If the code, CSS or
+    // theme has changed since, they no longer describe the component on screen, so
+    // ask for a fresh Accessibility Check instead of validating stale findings.
+    const precondition = checkDoubleCheckPreconditions(evaluationInputs, currentInputs);
+    if (!precondition.ok) {
+      setA11yDoubleCheckError(precondition.message);
+      return;
+    }
+
+    const selectedFinding =
+      scopeRequest === "auto" && selectedFindingRuleId
+        ? evaluationResult.findings.find((f) => f.ruleId === selectedFindingRuleId) ?? null
+        : null;
+    const sentFindings = selectedFinding ? [selectedFinding] : evaluationResult.findings;
+    const findingsPayload = JSON.stringify(sentFindings);
+    const scope: DoubleCheckScope = selectedFinding
+      ? {
+          kind: "finding",
+          ruleId: selectedFinding.ruleId,
+          ruleName: selectedFinding.ruleName,
+          status: selectedFinding.status,
+        }
+      : { kind: "all" };
+    const snapshot = buildDoubleCheckSnapshot(currentInputs, scope, sentFindings);
 
     // Defensive: the control is rendered as unavailable when the backend cannot
     // be reached, so this should not be callable. State the limitation plainly
@@ -258,7 +317,7 @@ export function App() {
           componentCode: reactCode,
           cssCode: currentCssCode,
           selectedThemeMode: previewTheme,
-          selectedFindingRuleId: selectedFindingRuleId ?? null,
+          selectedFindingRuleId: selectedFinding ? selectedFinding.ruleId : null,
           accessibilityFindings: findingsPayload,
           recommendedFix: evaluationResult.recommendedFixes.join("; ") || "no_fix",
         }),
@@ -269,6 +328,7 @@ export function App() {
       const parsedResult = data.xmlResult ? parseA11yDoubleCheckXml(data.xmlResult) : null;
       console.log("Parsed A11Y DoubleCheck result:", parsedResult);
       setA11yDoubleCheckResult(parsedResult);
+      setDoubleCheckSnapshot(parsedResult ? snapshot : null);
       setDoubleCheckEvaluationSignature(evaluationSignature);
     } catch (error) {
       console.error("A11Y DoubleCheck error:", error);
@@ -305,7 +365,7 @@ export function App() {
           onPreviewThemeChange={handlePreviewThemeChange}
           isPanelOpen={isPanelOpen}
           onTogglePanel={togglePanel}
-          onA11yDoubleCheck={handleA11yDoubleCheck}
+          onA11yDoubleCheck={() => runA11yDoubleCheck("auto")}
           isDoubleChecking={isDoubleChecking}
           a11yDoubleCheckError={a11yDoubleCheckError}
           isBackendReachable={IS_BACKEND_REACHABLE}
@@ -325,6 +385,13 @@ export function App() {
           doubleCheckEvaluationSignature={doubleCheckEvaluationSignature}
           claudeSummary={claudeSummary}
           isClaudeSummaryLoading={isClaudeSummaryLoading}
+          previewTheme={previewTheme}
+          currentInputsByTheme={currentInputsByTheme}
+          doubleCheckSnapshot={doubleCheckSnapshot}
+          lightResultInputs={lightResultInputs}
+          darkResultInputs={darkResultInputs}
+          isDoubleChecking={isDoubleChecking}
+          onRunDoubleCheckAll={() => runA11yDoubleCheck("all")}
         />
       </main>
       <footer className="app-footer">

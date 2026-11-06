@@ -1604,6 +1604,249 @@ body {
   outline-offset: 2px;
 }
 
+/* ── Interaction preview (optional, simulated) ─────────────────── */
+
+.doublecheck-interaction-chip {
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  width: fit-content;
+}
+
+.doublecheck-scope-caption {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.doublecheck-body--secondary {
+  color: var(--muted);
+}
+
+.doublecheck-body--note {
+  margin-top: 6px;
+  color: #ecd58b;
+}
+
+.doublecheck-approve-scope {
+  margin-bottom: 8px;
+}
+
+.doublecheck-runall-btn,
+.doublecheck-preview-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 1px solid #356ee5;
+  border-radius: 6px;
+  background: transparent;
+  color: #93b8ff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+}
+
+.doublecheck-runall-btn:hover:not(:disabled),
+.doublecheck-preview-btn:hover {
+  border-color: #4b7fe9;
+  background: rgba(31, 63, 125, 0.35);
+}
+
+.doublecheck-runall-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.doublecheck-runall-btn:focus-visible,
+.doublecheck-preview-btn:focus-visible {
+  outline: 2px solid #4b7fe9;
+  outline-offset: 2px;
+}
+
+/* aria-disabled rather than disabled, so the button stays focusable and its
+   reason (the notice above it) is reachable by keyboard and screen reader. */
+.doublecheck-approve-btn[aria-disabled="true"] {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+.doublecheck-approve-btn[aria-disabled="true"]:hover {
+  background: transparent;
+  border-color: var(--border);
+}
+
+dialog.interaction-dialog {
+  width: min(560px, 92vw);
+  max-height: 90vh;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  overflow: auto;
+}
+
+dialog.interaction-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.interaction-dialog__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.interaction-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.interaction-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.interaction-dialog__badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(201, 162, 39, 0.15);
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  color: #ecd58b;
+  white-space: nowrap;
+}
+
+.interaction-dialog__disclosure,
+.interaction-dialog__css-source {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.interaction-dialog__css-source {
+  color: var(--muted);
+}
+
+.interaction-standin-host {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.interaction-dialog__sim-controls,
+.interaction-dialog__footer {
+  display: flex;
+  gap: 8px;
+}
+
+.interaction-dialog__footer {
+  justify-content: flex-end;
+}
+
+.interaction-dialog__secondary-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.interaction-dialog__secondary-btn:hover {
+  border-color: var(--accent);
+}
+
+.interaction-dialog__secondary-btn:focus-visible,
+.interaction-check__option input:focus-visible,
+.interaction-check__note:focus-visible,
+.interaction-dialog__how summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.interaction-dialog__how {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.interaction-dialog__how summary {
+  cursor: pointer;
+  color: var(--text);
+}
+
+.interaction-dialog__how ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+.interaction-check {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.interaction-check__question {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.interaction-check__outcomes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.interaction-check__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.interaction-check__note-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.interaction-check__note {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.interaction-check__stamp {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* Proprietary notice. Uses --muted, which is 7.67:1 on --bg, so it stays legible
    at this size rather than being decoratively faint. */
 .app-footer {

@@ -9,7 +9,7 @@ import {
 
 export type ButtonPreviewState = "default" | "hover" | "active" | "disabled" | "focused";
 
-function scopePreviewCss(css: string): string {
+export function scopePreviewCss(css: string): string {
   return css.replace(/:root\b/g, ":host");
 }
 
@@ -44,7 +44,7 @@ export function hasVerifiableFocusVisible(cssCode: string): boolean {
   return /outline|box-shadow|border/.test(block);
 }
 
-const PREVIEW_SHELL_CSS = `
+export const PREVIEW_SHELL_CSS = `
 @import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&display=swap");
 
 :host {

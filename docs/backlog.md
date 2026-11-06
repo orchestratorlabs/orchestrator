@@ -5,7 +5,7 @@ the top of each section. Companion to the deployment runbook, which is kept loca
 (`docs/design/vercel-demo-deploy-runbook.md`, gitignored — it contains hosting and
 DNS steps).
 
-Last updated: 2026-10-15
+Last updated: 2026-11-06
 
 ---
 
@@ -300,6 +300,89 @@ Claude):
 ---
 
 ## 3. Engineering quality
+
+### 3.0 Shipped 2026-11-06 — "Open interaction preview" + approval accuracy
+
+Local, simulated, and deliberately small. **Not** Storybook integration, and it
+creates no story file. The reserved label "Create interaction story" is for a
+future version that generates a real story.
+
+**Interaction preview.** Under Recommended Next Step in the A11Y DoubleCheck card
+(any current result), **Open interaction preview** opens a native `<dialog>`:
+"Button / Save changes", badge *Simulated save*. A **stand-in** Button — a plain
+native `<button>` styled with the CSS the evaluator actually used — runs Save
+changes → Saving… → Changes saved. The pasted component is never executed, so
+every behaviour (focus is never moved, `aria-disabled` while saving, **no live
+region**) belongs to the demo, not to the developer's component. Two manual
+checks (focus, screen-reader announcement) start **Untested**; only the reviewer
+selecting *No issue observed* / *Problem observed* changes them. Notes are
+separate and never complete a check. Opening the preview or finishing the
+simulation never records anything.
+
+**Approval accuracy.**
+- `shipReadiness` is matched explicitly (`isShipReadyVerdict`): "Not Ship Ready"
+  can no longer qualify. The backend never validated the Claude path's value.
+- "Component checks passed" and Approve Component need: PASS, ship-ready, zero
+  remaining risks, a **current** result, **all-findings** scope, at least one
+  applicable finding, and **every applicable finding Pass** (N/A excluded). Any
+  Unknown shows "Review incomplete — N unverified" and keeps Approve unavailable.
+- A DoubleCheck on one selected finding shows "Selected finding passed"; approval
+  needs "Run DoubleCheck on all findings".
+- The reviewer-facing Summary is generated from what was **sent** (scope, theme,
+  counts). The raw model summary is kept in state for debugging, not shown.
+- Stale results: editing the React/CSS (or a theme switch / re-Evaluate) marks the
+  result **Needs re-run**, clears the approval and observations, and blocks sign-off
+  and export. Reverting the edit does not restore them. DoubleCheck now refuses to
+  run on findings from an out-of-date evaluation and asks for a fresh Accessibility
+  Check.
+- The export labels each theme: *Approved result* / *Previous result — re-run to
+  update* / *Not covered by this approval*, names the approved theme and scope, and
+  states the CSS source. **Dark mode always evaluates the built-in sample dark CSS**
+  (the editor is read-only there); the preview and report say so.
+- "John Doe" is the single `DEMO_REVIEWER` constant, labelled *demo placeholder*
+  in the UI and export. No identity, persistence or Storybook runner yet.
+
+**Follow-up edits, same day.**
+- **Disabled-text contrast wording.** WCAG 2.1 SC 1.4.3 exempts inactive controls, so
+  only the *active* button is a WCAG 1.4.3 assessment; the disabled label's measured
+  contrast is an "OrchestratoR readability check". Fixed at the sources, wording only
+  (rules, thresholds, deductions and the 85 / 100 baseline unchanged): the Rule 5
+  evidence in `buttonEvaluator.ts` (carries both measured ratios), the DoubleCheck
+  prompt (`CONTRAST_WORDING_RULE` in `app.py`) and `a11y_doublecheck_output_format.txt`
+  (included in full in the prompt), plus the registry, examples and the rule-based
+  fallback text. Note the registry's old "include disabled state text" instruction sat
+  past the 2000-character slice the prompt includes, so it never reached the model; the
+  misleading wording came from the evaluator's "both >= 4.5:1" evidence. Pass evidence
+  must not contain the word "fail" (the fallback treats it as a failure signal), and a
+  disabled Fail must keep "disabled-state" and both colours (editor annotation and local
+  score summary match on them). Pinned in `tests/contrastWording.test.ts`. The Score
+  Summary still says "design-system readability recommendation" (not changed here).
+- **Preview headings.** Radio-group headings are "Keyboard focus after activation" and
+  "Screen-reader announcement after saving"; the optional notes are labelled "Where did
+  focus go? (optional)" and "What did you hear? (optional)".
+- **Approvable state.** The "Recommended Next Step" heading and sentence are removed when
+  both Open interaction preview and Approve Component are on offer. One line sits above
+  Approve, generated from the snapshot: "Approval covers the 10 light-mode findings.
+  Preview observations are reported separately." Selected-finding, incomplete and stale
+  states keep their guidance.
+
+**Known limits / open follow-ups.**
+- DoubleCheck Evidence/Verified wording is *prompted*, not enforced: a live model reply
+  could still drift. Verified on fresh runs only.
+- Observations about a stand-in describe the *simulation*, not the component.
+- Evidence and Verified items in the card are still the model's own text.
+- The backend prompt tells the model "all findings are passing" about a
+  one-finding payload, so single-finding model text can overstate its scope. The
+  display layer corrects the wording; fixing it at the source is separate.
+- Only Unknown (or Fail) findings can be selected in the UI, so "Selected finding
+  passed" is reached by DoubleChecking an Unknown finding.
+- The light sample has a Fail, so DoubleCheck (and approval) is reachable there only
+  after fixing `--Text-Disabled`; the dark sample is the known-passing example.
+- Approval covers one theme at a time; switching theme clears it.
+
+Files: `doubleCheckReadiness.ts`, `interactionObservations.ts`, `demoReviewer.ts`,
+`InteractionPreviewDialog.tsx`; tests in `tests/doubleCheckReadiness.test.ts` and
+`tests/interactionObservations.test.ts`.
 
 ### 3.0 ARIA Semantics rule + Not Applicable status — scope refined 2026-10-15
 
