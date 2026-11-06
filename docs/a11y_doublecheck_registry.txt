@@ -93,8 +93,11 @@ criterion_1:
   title: Contrast (Minimum)
   level: AA
   validation_check: >
-    Verify that text contrast ratio meets 4.5:1 for normal text
-    and 3:1 for large text. Include disabled state text if present.
+    Verify that the ACTIVE (default) button text contrast ratio meets 4.5:1
+    for normal text and 3:1 for large text. Do not assess disabled-state text
+    under this criterion: WCAG 2.1 SC 1.4.3 exempts inactive components. Report
+    the disabled label's measured contrast separately as an "OrchestratoR
+    readability check", never as WCAG compliance.
     Check both Light mode and Dark mode token values when applicable.
 
 criterion_2:

@@ -37,12 +37,12 @@ A11Y_DOUBLECHECK_MOCK_XML = """<a11y_doublecheck_result>
     <source>https://www.w3.org/TR/WCAG21/#contrast-minimum</source>
     <source>https://www.w3.org/TR/WCAG21/#non-text-contrast</source>
   </sources_checked>
-  <evidence_summary>WCAG contrast guidance was checked against the current design token values. No blocking accessibility risks were detected. A11Y DoubleCheck validated this result using trusted W3C/WAI references and OrchestratoR's local accessibility validation rules.</evidence_summary>
+  <evidence_summary>WCAG contrast guidance was checked against the active button's design token values. No blocking accessibility risks were detected. Disabled-state contrast is exempt from WCAG 1.4.3 and is reported separately as an OrchestratoR readability check. A11Y DoubleCheck validated this result using trusted W3C/WAI references and OrchestratoR's local accessibility validation rules.</evidence_summary>
   <verified_items>
     <item>
       <criterion>WCAG 1.4.3 Contrast Minimum</criterion>
       <result>PASS</result>
-      <detail>WCAG 1.4.3 Contrast Minimum passed for the evaluated button state.</detail>
+      <detail>WCAG 1.4.3 Contrast Minimum passed for the active button state (disabled-state contrast is exempt from 1.4.3).</detail>
     </item>
     <item>
       <criterion>WCAG 1.4.11 Non-text Contrast</criterion>
@@ -220,13 +220,14 @@ def _build_evidence_summary(findings_text, recommended_fix_text, any_success):
     return (
         f"Controlled W3C/WAI lookup completed for {criteria_str}. "
         "The checked guidance supports validating accessibility requirements "
-        "against WCAG thresholds before ship."
+        "against WCAG thresholds before ship. WCAG 1.4.3 is assessed for the active button; "
+        "disabled-state contrast is exempt and is reported separately as an OrchestratoR readability check."
     )
 
 
 # Source URL fragment → (WCAG criterion label, detail text)
 _SOURCE_CRITERIA = [
-    ("#contrast-minimum",  "WCAG 1.4.3 Contrast Minimum",    "Updated text token meets the expected contrast threshold for the evaluated state."),
+    ("#contrast-minimum",  "WCAG 1.4.3 Contrast Minimum",    "Active button text contrast was checked against WCAG 1.4.3. Disabled-state contrast is exempt from 1.4.3 and is reported separately as an OrchestratoR readability check."),
     ("#non-text-contrast", "WCAG 1.4.11 Non-text Contrast",   "Relevant UI boundary or focus contrast guidance was checked against trusted W3C/WAI sources."),
     ("#keyboard",          "WCAG 2.1.1 Keyboard",             "Component is fully operable via keyboard without requiring specific timings."),
     ("#focus-visible",     "WCAG 2.4.7 Focus Visible",        "Keyboard focus indicator is visible when the component receives focus."),
@@ -254,7 +255,7 @@ def _criteria_from_sources(selected_sources, default_result="PASS", excluded_fra
     if not items and not excluded:
         items = [
             {"criterion": "WCAG 1.4.3 Contrast Minimum", "result": default_result,
-             "detail": "Contrast ratio evaluated against WCAG AA thresholds."},
+             "detail": "Active button text contrast evaluated against WCAG AA thresholds (disabled-state contrast is exempt from 1.4.3)."},
             {"criterion": "WCAG 2.1.1 Keyboard", "result": default_result,
              "detail": "Keyboard operability evaluated."},
         ]
@@ -274,6 +275,16 @@ def _tainted_fragments_for_fail(fail_signals):
     if "focus" in signal_text:
         tainted |= {"#focus-visible"}
     return tainted
+
+
+def _measured_disabled_ratio(findings_text):
+    """Return the disabled-state ratio the evaluator measured (e.g. "1.79"), or None.
+
+    The evaluator words it as "OrchestratoR readability check (disabled-state; ...): 1.79:1",
+    so the fallback quotes the real measurement instead of a hard-coded one.
+    """
+    match = re.search(r"readability check \(disabled-state[^)]*\):\s*([0-9]+\.[0-9]+):1", findings_text or "")
+    return match.group(1) if match else None
 
 
 def build_a11y_doublecheck_verdict(payload, selected_sources, web_lookup_results):
@@ -387,17 +398,19 @@ def build_a11y_doublecheck_verdict(payload, selected_sources, web_lookup_results
         )
 
         if is_disabled_contrast:
+            measured = _measured_disabled_ratio(findings)
+            measured_text = f" (measured {measured}:1)" if measured else ""
             risk_msg = (
-                "Disabled text contrast is below OrchestratoR's design-system readability threshold.\n\n"
-                "WCAG exempts inactive controls from required contrast minimums, but this disabled-state "
+                f"OrchestratoR readability check: disabled-state text contrast{measured_text} is below OrchestratoR's 4.5:1 readability threshold.\n\n"
+                "WCAG 2.1 SC 1.4.3 exempts inactive controls, so this is not a WCAG failure, but this disabled-state "
                 "token may still reduce clarity for low-vision users and product teams reviewing component "
                 "states.\n\n"
                 "OrchestratoR recommends updating --Text-Disabled to the approved design-system value #494949."
             )
             next_step = "Update --Text-Disabled to the approved design-system value #494949. Then rerun Accessibility Check."
             fail_summary = (
-                "A11Y DoubleCheck found a disabled text contrast issue that falls below "
-                "OrchestratoR's design-system readability threshold."
+                "The OrchestratoR readability check found disabled-state text contrast below "
+                "OrchestratoR's readability threshold. This is not a WCAG 1.4.3 failure."
             )
         else:
             risk_msg = fail_risk_detail or "; ".join(fail_signals)
@@ -838,6 +851,18 @@ def _parse_a11y_xml_to_verdict(xml_string):
     }
 
 
+# Applies to every scope branch of the DoubleCheck prompt. The evaluator measures the
+# ratios and puts them in the findings; the model must quote those, and must never
+# present the disabled state as a WCAG 1.4.3 pass or fail (SC 1.4.3 exempts it).
+CONTRAST_WORDING_RULE = """CONTRAST WORDING RULE — APPLIES TO EVERY SCOPE ABOVE:
+- WCAG 2.1 SC 1.4.3 exempts inactive (disabled) components from the contrast minimum. Never state or imply that disabled-state text passes, fails, meets, or satisfies WCAG 1.4.3.
+- Assess WCAG 1.4.3 for the ACTIVE (default) button text only.
+- A disabled-state contrast measurement is not a WCAG assessment. Describe it only as an "OrchestratoR readability check" and quote its measured ratio.
+- Use only ratios that appear in the findings below (the evaluator measured them). Never compute, estimate, or round other ratios.
+- Keep the two separate. In <evidence_summary> (still 2–3 sentences), give the WCAG 1.4.3 statement for the active button in one sentence and, only if the findings contain a disabled-state measurement, the OrchestratoR readability check in its own sentence.
+- In <verified_items>, a WCAG 1.4.3 item describes the active button only. Never put the disabled-state ratio in a WCAG item, and do not add a non-WCAG item."""
+
+
 def build_a11y_doublecheck_prompt(payload, rag_contents, selected_sources, web_lookup_results):
     """Build the prompt sent to Claude for A11Y DoubleCheck validation."""
     component_code = (payload.get("componentCode") or "").strip()
@@ -917,6 +942,8 @@ Findings with status N/A (Not Applicable) were decided by OrchestratoR's predefi
 the rule does not apply to this component. Do not treat N/A as a failure or as a pass, and do not
 override it. You may explain it."""
 
+    contrast_wording_rule = CONTRAST_WORDING_RULE
+
     return f"""You are the A11Y DoubleCheck Agent for OrchestratoR.
 
 CRITICAL OUTPUT RULE: Your entire response must be ONLY the XML block defined in the output format spec below.
@@ -925,6 +952,8 @@ Do NOT use markdown formatting inside the XML.
 
 ---
 {scope_rule}
+
+{contrast_wording_rule}
 
 VERIFIED ITEMS LIMIT: Include at most 2 items in <verified_items>. Choose the 1–2 most directly
 relevant to the current finding. Do not pad with passing criteria that are not part of the finding.
@@ -1087,7 +1116,8 @@ def build_static_response(evaluation_context):
             f"{mode_label} passed because all {pass_count} evaluated button accessibility rules passed "
             f"with no known failures. The {mode_label} tokens provide sufficient contrast across the "
             f"tested button states, including default, hover, active, disabled, and focused. "
-            f"The disabled text token meets the required contrast against the disabled background, "
+            f"The OrchestratoR readability check for the disabled label also meets 4.5:1 against the disabled background "
+            f"(WCAG 1.4.3 exempts inactive controls, so this is not a WCAG measurement), "
             f"and the focus styling remains visible. "
             f"Passing rules: {rules_summary}."
         )

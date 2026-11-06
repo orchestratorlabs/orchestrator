@@ -178,6 +178,31 @@ recommended_next_step:
     If Do Not Ship: "Resolve [specific failure] before shipping — see remaining_risks."
 
 ========================================
+CONTRAST WORDING (DISABLED STATE)
+========================================
+WCAG 2.1 SC 1.4.3 exempts inactive (disabled) user interface components from the
+contrast minimum. Therefore:
+
+- Assess WCAG 1.4.3 for the ACTIVE (default) button text only.
+- Never state or imply that disabled-state text passes, fails, meets or satisfies
+  WCAG 1.4.3.
+- A disabled-state contrast measurement is not a WCAG assessment. Describe it only
+  as an "OrchestratoR readability check" and quote its measured ratio.
+- Use only ratios that appear in the findings (the evaluator measured them). Do not
+  compute, estimate or round other ratios.
+- Keep the two statements separate. In evidence_summary, give the WCAG 1.4.3
+  statement for the active button in one sentence and the OrchestratoR readability
+  check in its own sentence (only when the findings contain a disabled-state
+  measurement).
+- In verified_items, a WCAG 1.4.3 item describes the active button only. Do not put
+  the disabled-state ratio in any WCAG item.
+
+Example evidence_summary wording:
+  "WCAG 2.1 SC 1.4.3 requires 4.5:1 for normal text; the active button's text
+   measures 8.51:1. OrchestratoR readability check (not a WCAG assessment, because
+   SC 1.4.3 exempts inactive controls): the disabled-state label measures 4.77:1."
+
+========================================
 PROHIBITED OUTPUT PATTERNS
 ========================================
 The following output patterns are not permitted:
@@ -187,5 +212,6 @@ The following output patterns are not permitted:
 - Markdown formatting inside the XML (no **, no #, no ``).
 - URLs from non-trusted sources inside <sources_checked>.
 - Invented contrast ratios or thresholds not grounded in W3C normative text.
+- Stating that disabled-state text passes, fails or meets WCAG 1.4.3.
 - Combining multiple theme mode results into a single XML block.
   Each theme mode (Light, Dark) requires a separate validation run and XML block.

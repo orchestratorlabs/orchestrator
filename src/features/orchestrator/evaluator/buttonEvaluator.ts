@@ -169,6 +169,23 @@ function relativeLuminance(hex: string): number {
   return 0.2126 * channel[0] + 0.7152 * channel[1] + 0.0722 * channel[2];
 }
 
+/**
+ * Wording for the Text Contrast rule. WCAG 2.1 SC 1.4.3 exempts inactive (disabled)
+ * controls from the contrast minimum, so only the ACTIVE button's contrast is a WCAG
+ * assessment. The disabled label's measured contrast is OrchestratoR's own
+ * readability check and is always labelled as such. Wording only: the Pass/Fail
+ * decision, the 4.5:1 threshold and the deduction live in the rule logic below.
+ * Pass-state evidence deliberately avoids the word "fail": the backend's rule-based
+ * fallback treats that substring in the findings as a failure signal.
+ */
+const DISABLED_READABILITY_LABEL =
+  "OrchestratoR readability check (disabled-state; SC 1.4.3 exempts inactive controls, so this is not a WCAG measurement)";
+
+function activeWcagEvidence(activeRatio: number): string {
+  const verdict = activeRatio >= 4.5 ? ">= 4.5:1" : "< 4.5:1";
+  return `WCAG 2.1 SC 1.4.3 (active button): default text contrast ${activeRatio.toFixed(2)}:1 (${verdict}).`;
+}
+
 function contrastRatio(foregroundHex: string, backgroundHex: string): number {
   const l1 = relativeLuminance(foregroundHex);
   const l2 = relativeLuminance(backgroundHex);
@@ -487,42 +504,49 @@ export function evaluateButtonAccessibility(reactCode: string, rawCssCode: strin
         const disabledRatio = contrastRatio(disabledColorHex, disabledBackgroundHex);
 
         if (disabledRatio < 4.5) {
+          // The rule still Fails (existing evaluator rule, unchanged). The wording
+          // keeps the two measurements apart: WCAG 2.1 SC 1.4.3 exempts inactive
+          // controls, so the disabled figure is OrchestratoR's own readability check,
+          // and only the active button is a WCAG 1.4.3 assessment. "disabled-state"
+          // and the two colours stay in this sentence — the editor annotation and the
+          // local score summary match on them.
           findings.push(
             createFail(
               RULES[4],
-              `Computed disabled-state text contrast ratio ${disabledRatio.toFixed(
+              `${DISABLED_READABILITY_LABEL}: ${disabledRatio.toFixed(
                 2
-              )}:1 (< 4.5:1) using ${disabledColorHex} text on ${disabledBackgroundHex} background.`,
-              "Adjust the disabled button label color or disabled background color to meet at least 4.5:1 contrast for normal text. Change it at the source — the custom property this declaration resolves to, not the var() fallback."
+              )}:1 (< 4.5:1) using ${disabledColorHex} text on ${disabledBackgroundHex} background. ${activeWcagEvidence(ratio)}`,
+              "Adjust the disabled button label color or disabled background color to reach at least 4.5:1 for OrchestratoR's readability check (WCAG 2.1 SC 1.4.3 does not require this for inactive controls). Change it at the source — the custom property this declaration resolves to, not the var() fallback." +
+                (ratio < 4.5
+                  ? " Also adjust the default text/background colors to meet at least 4.5:1 for the active button (WCAG 1.4.3)."
+                  : "")
             )
           );
         } else if (ratio >= 4.5) {
           findings.push(
             createPass(
               RULES[4],
-              `Computed default text contrast ratio ${ratio.toFixed(
-                2
-              )}:1 and disabled-state text contrast ratio ${disabledRatio.toFixed(2)}:1 (both >= 4.5:1).`
+              `${activeWcagEvidence(ratio)} ${DISABLED_READABILITY_LABEL}: ${disabledRatio.toFixed(2)}:1 (>= 4.5:1).`
             )
           );
         } else {
+          // Active button is the failing measurement here; the disabled state is not
+          // mentioned (it is fine, and mentioning it would mis-target the annotation).
           findings.push(
             createFail(
               RULES[4],
-              `Computed default text contrast ratio ${ratio.toFixed(2)}:1 (< 4.5:1).`,
+              activeWcagEvidence(ratio),
               "Adjust text/background colors to meet at least 4.5:1 contrast for normal text."
             )
           );
         }
       } else if (ratio >= 4.5) {
-        findings.push(
-          createPass(RULES[4], `Computed text contrast ratio ${ratio.toFixed(2)}:1 (>= 4.5:1).`)
-        );
+        findings.push(createPass(RULES[4], activeWcagEvidence(ratio)));
       } else {
         findings.push(
           createFail(
             RULES[4],
-            `Computed text contrast ratio ${ratio.toFixed(2)}:1 (< 4.5:1).`,
+            activeWcagEvidence(ratio),
             "Adjust text/background colors to meet at least 4.5:1 contrast for normal text."
           )
         );
