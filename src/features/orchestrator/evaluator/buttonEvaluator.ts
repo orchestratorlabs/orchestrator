@@ -516,7 +516,7 @@ export function evaluateButtonAccessibility(reactCode: string, rawCssCode: strin
               `${DISABLED_READABILITY_LABEL}: ${disabledRatio.toFixed(
                 2
               )}:1 (< 4.5:1) using ${disabledColorHex} text on ${disabledBackgroundHex} background. ${activeWcagEvidence(ratio)}`,
-              "Adjust the disabled button label color or disabled background color to reach at least 4.5:1 for OrchestratoR's readability check (WCAG 2.1 SC 1.4.3 does not require this for inactive controls). Change it at the source — the custom property this declaration resolves to, not the var() fallback." +
+              "Adjust the disabled button label color or disabled background color to reach at least 4.5:1 for OrchestratoR's readability check. WCAG 2.1 SC 1.4.3 does not require this for inactive controls, but your design system may. Check your design system's disabled-state contrast requirement before deciding. Change it at the source — the custom property this declaration resolves to, not the var() fallback." +
                 (ratio < 4.5
                   ? " Also adjust the default text/background colors to meet at least 4.5:1 for the active button (WCAG 1.4.3)."
                   : "")

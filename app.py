@@ -404,10 +404,11 @@ def build_a11y_doublecheck_verdict(payload, selected_sources, web_lookup_results
                 f"OrchestratoR readability check: disabled-state text contrast{measured_text} is below OrchestratoR's 4.5:1 readability threshold.\n\n"
                 "WCAG 2.1 SC 1.4.3 exempts inactive controls, so this is not a WCAG failure, but this disabled-state "
                 "token may still reduce clarity for low-vision users and product teams reviewing component "
-                "states.\n\n"
-                "OrchestratoR recommends updating --Text-Disabled to the approved design-system value #494949."
+                "states. Your design system may require it, so check your design system's disabled-state "
+                "contrast requirement before deciding.\n\n"
+                "For reference, the sample design system's approved value for --Text-Disabled is #494949."
             )
-            next_step = "Update --Text-Disabled to the approved design-system value #494949. Then rerun Accessibility Check."
+            next_step = "Check your design system's disabled-state contrast requirement. If you adopt the readability check, the sample design system's approved value is #494949. Then rerun Accessibility Check."
             fail_summary = (
                 "The OrchestratoR readability check found disabled-state text contrast below "
                 "OrchestratoR's readability threshold. This is not a WCAG 1.4.3 failure."
@@ -860,7 +861,8 @@ CONTRAST_WORDING_RULE = """CONTRAST WORDING RULE — APPLIES TO EVERY SCOPE ABOV
 - A disabled-state contrast measurement is not a WCAG assessment. Describe it only as an "OrchestratoR readability check" and quote its measured ratio.
 - Use only ratios that appear in the findings below (the evaluator measured them). Never compute, estimate, or round other ratios.
 - Keep the two separate. In <evidence_summary> (still 2–3 sentences), give the WCAG 1.4.3 statement for the active button in one sentence and, only if the findings contain a disabled-state measurement, the OrchestratoR readability check in its own sentence.
-- In <verified_items>, a WCAG 1.4.3 item describes the active button only. Never put the disabled-state ratio in a WCAG item, and do not add a non-WCAG item."""
+- In <verified_items>, a WCAG 1.4.3 item describes the active button only. Never put the disabled-state ratio in a WCAG item, and do not add a non-WCAG item.
+- When the findings contain a below-threshold disabled-state readability check, add that WCAG does not require it for inactive controls but the team's design system may, and tell the reader to check their design system's disabled-state contrast requirement. Never state or imply that a design system does require it: that is unverified."""
 
 
 def build_a11y_doublecheck_prompt(payload, rag_contents, selected_sources, web_lookup_results):

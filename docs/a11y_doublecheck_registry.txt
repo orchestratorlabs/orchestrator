@@ -97,7 +97,10 @@ criterion_1:
     for normal text and 3:1 for large text. Do not assess disabled-state text
     under this criterion: WCAG 2.1 SC 1.4.3 exempts inactive components. Report
     the disabled label's measured contrast separately as an "OrchestratoR
-    readability check", never as WCAG compliance.
+    readability check", never as WCAG compliance. When that check is below its
+    threshold, note that WCAG does not require it for inactive controls but the
+    team's design system may, and point the reader to their design system's
+    disabled-state contrast requirement. Never claim a design system requires it.
     Check both Light mode and Dark mode token values when applicable.
 
 criterion_2:

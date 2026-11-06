@@ -196,6 +196,11 @@ contrast minimum. Therefore:
   measurement).
 - In verified_items, a WCAG 1.4.3 item describes the active button only. Do not put
   the disabled-state ratio in any WCAG item.
+- When the findings contain a below-threshold disabled-state readability check, say
+  that WCAG does not require it for inactive controls but the team's design system
+  may, and tell the reader to check their design system's disabled-state contrast
+  requirement. Never state or imply that a design system does require it: that is
+  unverified.
 
 Example evidence_summary wording:
   "WCAG 2.1 SC 1.4.3 requires 4.5:1 for normal text; the active button's text

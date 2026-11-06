@@ -51,7 +51,10 @@ describe("Text Contrast evidence wording", () => {
     assert.match(finding.evidence, /1\.79:1 \(< 4\.5:1\)/);
     assert.match(finding.evidence, /WCAG 2\.1 SC 1\.4\.3 \(active button\): default text contrast 9\.02:1 \(>= 4\.5:1\)/);
     assert.match(finding.recommendation, /OrchestratoR's readability check/);
-    assert.match(finding.recommendation, /does not require this for inactive controls/);
+    assert.match(finding.recommendation, /does not require this for inactive controls, but your design system may/);
+    assert.match(finding.recommendation, /Check your design system's disabled-state contrast requirement before deciding/);
+    // A check to make, not a verdict: never says the design system does require it.
+    assert.doesNotMatch(finding.recommendation, /design system (does|requires|mandates)/i);
   });
 
   it("keeps what the editor annotation and the local score summary match on", () => {
