@@ -12,6 +12,7 @@
  */
 import { DEMO_REVIEWER_LABEL } from "./demoReviewer";
 import { THEME_LABEL, describeCssSource, type ThemeMode } from "./doubleCheckReadiness";
+import { line, renderMarkdown, type ReportBlock, type ReportLine } from "./report/reportModel";
 
 export type CheckId = "focus" | "announcement";
 export type CheckOutcome = "untested" | "no-issue" | "problem";
@@ -135,41 +136,57 @@ export const SIMULATION_BEHAVIOR_SUMMARY =
   "native button; the label changes in place (Save changes → Saving… → Changes saved); aria-disabled while saving; the demo never moves focus; no live region is added.";
 
 /**
- * The export's interaction section. Always present, so an untested check reads as
- * Untested rather than going missing. Stamps appear only where something was
- * actually recorded.
+ * The export's interaction section, as report blocks. Always present, so an untested
+ * check reads as Untested rather than going missing. Stamps appear only where
+ * something was actually recorded. Both export formats render these same blocks.
  */
-export function formatObservationsSection(args: {
+export function buildObservationBlocks(args: {
   state: ObservationState;
   theme: ThemeMode;
-}): string {
+}): ReportBlock[] {
   const { state, theme } = args;
-  const lines: string[] = [
-    "## Interaction observations (manual, simulated)",
-    "",
-    "Source: stand-in Button, simulated save. Observations apply to this simulated save, not to the submitted component.",
-    `Stand-in styling (${THEME_LABEL[theme]}): ${describeCssSource(theme)}.`,
-    `Demo behavior: ${SIMULATION_BEHAVIOR_SUMMARY}`,
-    "Not included in the Health Score or component approval.",
-    "",
+  const blocks: ReportBlock[] = [
+    { kind: "heading", level: 2, text: "Interaction observations (manual, simulated)" },
+    { kind: "gap" },
+    {
+      kind: "lines",
+      lines: [
+        line(
+          "Source: stand-in Button, simulated save. Observations apply to this simulated save, not to the submitted component.",
+          "secondary"
+        ),
+        line(`Stand-in styling (${THEME_LABEL[theme]}): ${describeCssSource(theme)}.`, "secondary"),
+        line(`Demo behavior: ${SIMULATION_BEHAVIOR_SUMMARY}`, "secondary"),
+        line("Not included in the Health Score or component approval.", "secondary"),
+      ],
+    },
+    { kind: "gap" },
   ];
 
   INTERACTION_CHECKS.forEach((check, index) => {
     const entry = state[check.id];
-    lines.push(`${index + 1}. ${check.heading}`);
-    lines.push(`   Status: ${OUTCOME_LABEL[entry.outcome]}`);
+    const lines: ReportLine[] = [line(`Status: ${OUTCOME_LABEL[entry.outcome]}`)];
     if (entry.note.trim() !== "") {
       // Labelled with the prompt the reviewer saw, so a bare note stays readable.
-      lines.push(`   Note (${check.noteLabel.replace(/ \(optional\)$/, "")}): ${entry.note.trim()}`);
+      lines.push(line(`Note (${check.noteLabel.replace(/ \(optional\)$/, "")}): ${entry.note.trim()}`));
     }
     if (entry.outcomeRecordedAt) {
-      lines.push(`   Outcome recorded by ${DEMO_REVIEWER_LABEL} · ${entry.outcomeRecordedAt}`);
+      lines.push(line(`Outcome recorded by ${DEMO_REVIEWER_LABEL} · ${entry.outcomeRecordedAt}`, "secondary"));
     }
     if (entry.noteRecordedAt) {
-      lines.push(`   Note added by ${DEMO_REVIEWER_LABEL} · ${entry.noteRecordedAt}`);
+      lines.push(line(`Note added by ${DEMO_REVIEWER_LABEL} · ${entry.noteRecordedAt}`, "secondary"));
     }
-    lines.push("");
+    if (index > 0) blocks.push({ kind: "gap" });
+    blocks.push({ kind: "check", marker: `${index + 1}. `, title: check.heading, lines });
   });
 
-  return lines.join("\n").trimEnd();
+  return blocks;
+}
+
+/** The same section as Markdown text. */
+export function formatObservationsSection(args: {
+  state: ObservationState;
+  theme: ThemeMode;
+}): string {
+  return renderMarkdown(buildObservationBlocks(args));
 }

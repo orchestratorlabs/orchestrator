@@ -366,6 +366,32 @@ simulation never records anything.
   Preview observations are reported separately." Selected-finding, incomplete and stale
   states keep their guidance.
 
+**Manual test completed 2026-11-06 (Craig, Light mode).** Logged from Craig's own
+observations; nothing here was run or inferred by tooling. **Scope: the stand-in Button's
+simulated save only.** These are not findings about the submitted component, and they are
+kept separate from the component Health Score and component approval (neither was changed).
+
+| Check | Outcome | Time | Note (reviewer's words) |
+|---|---|---|---|
+| Keyboard focus after activation | No issue observed | 2:08 PM ET | "Focus stayed on the button, and the focus ring remained visible when the label changed to 'Changes saved.'" |
+| Screen-reader announcement after saving | **Problem observed — OPEN** | 2:09 PM ET | "VoiceOver read 'Save changes, button.' After I activated it, the label changed to 'Changes saved,' but I heard no completion announcement." |
+
+- **Markdown export — verified.** The downloaded file
+  `orchestrator-report-button-202611061912.md` contained both outcomes, both notes and
+  their timestamps under "Interaction observations (manual, simulated)."
+- **Open: no VoiceOver completion announcement** after the stand-in's simulated save.
+  Recorded as observed and open, not resolved. For context, the stand-in is documented
+  above as having **no live region** and changing its label in place, so the demo adds
+  nothing that would announce the change. Whether a real component should announce
+  completion is not decided here, and no fix is made or implied by this entry.
+- Tested with VoiceOver in Chrome. No other screen reader or browser is recorded for this test.
+- **PDF export** was deferred at the time of this test and has since been added: a
+  "Markdown (.md) / PDF (.pdf)" choice beside Export Accessibility Report. Both formats
+  render one shared report model (`src/features/orchestrator/report/`); Markdown is the
+  default and its output is unchanged. The PDF is US Letter, selectable text, untagged
+  (not a tagged accessible PDF), and replaces characters outside Windows-1252 with "?"
+  and says so in the file.
+
 **Known limits / open follow-ups.**
 - DoubleCheck Evidence/Verified wording is *prompted*, not enforced: a live model reply
   could still drift. Verified on fresh runs only.

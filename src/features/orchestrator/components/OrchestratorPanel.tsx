@@ -7,16 +7,13 @@ import { DEMO_REVIEWER_LABEL } from "../demoReviewer";
 import {
   THEME_LABEL,
   buildDoubleCheckDisplay,
-  describeCssSource,
   isDoubleCheckCurrent,
-  themeSectionTag,
   type DoubleCheckSnapshot,
   type EvaluationInputs,
   type ThemeMode,
 } from "../doubleCheckReadiness";
 import {
   createObservationState,
-  formatObservationsSection,
   formatStamp,
   interactionChipText,
   setNote,
@@ -24,6 +21,9 @@ import {
   type CheckId,
   type CheckOutcome,
 } from "../interactionObservations";
+import { buildAccessibilityReport, sortFindingsForPanel } from "../report/accessibilityReport";
+import { renderPdf } from "../report/pdfReport";
+import { renderMarkdown } from "../report/reportModel";
 import { InteractionPreviewDialog } from "./InteractionPreviewDialog";
 
 interface OrchestratorPanelProps {
@@ -90,8 +90,6 @@ const STATUS_CLASS: Record<A11yDoubleCheckResult["status"], string> = {
  */
 const EMPTY_QUESTION_MESSAGE = "You need to first ask a question, then Submit";
 
-const FINDING_PANEL_SORT_ORDER: Record<string, number> = { Fail: 0, Unknown: 1, Pass: 2, "N/A": 3 };
-
 /** CSS-safe class name for a status ("N/A" is not a valid class name to select on). */
 function statusClassName(status: EvaluationResult["findings"][number]["status"]) {
   return status === "N/A" ? "not-applicable" : status.toLowerCase();
@@ -102,16 +100,15 @@ function statusLabel(status: EvaluationResult["findings"][number]["status"]) {
   return status === "N/A" ? "N/A — Not Applicable" : status;
 }
 
-/**
- * The order findings are shown in the panel. Shared with the exported report so
- * the number on a finding card ("3.") refers to the same finding in both places.
- * The sort is stable, so rules keep their source order within a status.
- */
-function sortFindingsForPanel(findings: EvaluationResult["findings"]) {
-  return [...findings].sort(
-    (a, b) =>
-      (FINDING_PANEL_SORT_ORDER[a.status] ?? 3) - (FINDING_PANEL_SORT_ORDER[b.status] ?? 3)
-  );
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 export function OrchestratorPanel({
@@ -208,6 +205,8 @@ export function OrchestratorPanel({
   const [approvalCleared, setApprovalCleared] = useState(false);
   const [observations, setObservations] = useState(createObservationState);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  // Markdown stays the default, so a plain click on Export behaves as it always has.
+  const [exportFormat, setExportFormat] = useState<"markdown" | "pdf">("markdown");
   const previewTriggerRef = useRef<HTMLButtonElement>(null);
   const approveSectionRef = useRef<HTMLDivElement>(null);
 
@@ -275,90 +274,40 @@ export function OrchestratorPanel({
     requestAnimationFrame(() => previewTriggerRef.current?.focus());
   };
 
-  const formatThemeSection = (
-    theme: ThemeMode,
-    result: EvaluationResult | null,
-    resultInputs: EvaluationInputs | null
-  ) => {
-    const label = THEME_LABEL[theme];
-    const tag = themeSectionTag({
-      theme,
-      hasResult: result !== null,
-      resultInputs,
-      currentInputs: currentInputsByTheme[theme],
-      approvedTheme: approval?.theme ?? null,
-    });
-    const heading = tag ? `## ${label} — ${tag}` : `## ${label}`;
-    if (!result) {
-      return `${heading}\n\nNot yet evaluated — switch to ${label.toLowerCase()} and run the accessibility check to include it.`;
-    }
-    const passCount = result.findings.filter((f) => f.status === "Pass").length;
-    const unknownCount = result.findings.filter((f) => f.status === "Unknown").length;
-    const failCount = result.findings.filter((f) => f.status === "Fail").length;
-    const notApplicableCount = result.findings.filter((f) => f.status === "N/A").length;
-    // Numbered in the panel's display order so "finding 3" means the same
-    // finding in the report and on screen. Continuation lines are indented to
-    // the width of the list marker so they stay part of the list item.
-    const findingLines = sortFindingsForPanel(result.findings).map((f, index) => {
-      const marker = `${index + 1}. `;
-      return `${marker}[${f.status}] ${f.ruleName} (${f.severity}) — ${f.evidence}${
-        f.recommendation ? `\n${" ".repeat(marker.length)}Recommendation: ${f.recommendation}` : ""
-      }`;
-    });
-    const fixLines = result.recommendedFixes.map((fix) => `- ${fix}`);
-    return [
-      heading,
-      "",
-      `CSS source: ${describeCssSource(theme)}.`,
-      `Score: ${result.healthScore}/100 (${passCount} pass, ${unknownCount} unknown, ${failCount} fail${
-        notApplicableCount > 0 ? `, ${notApplicableCount} N/A` : ""
-      })`,
-      "",
-      "### Findings",
-      ...(findingLines.length ? findingLines : ["- No findings recorded."]),
-      "",
-      "### Recommended fixes",
-      ...(fixLines.length ? fixLines : ["- None."]),
-    ].join("\n");
-  };
-
   const handleExportReport = () => {
     // Defence in depth: the button is only rendered for a valid approval, but the
     // handler refuses to run against a stale or unapproved result regardless.
     if (!canExport || !approval) return;
 
     const now = new Date();
-    const stamp = formatStamp(now);
     const componentName = loadedComponentName ?? "Component";
 
-    const markdown = [
-      "# OrchestratoR Accessibility Report",
-      "",
-      `Component: ${componentName}`,
-      `Approved by ${DEMO_REVIEWER_LABEL} · ${approval.at}`,
-      `Approved scope: ${THEME_LABEL[approval.theme]} · all ${approval.findingTotal} evaluated findings`,
-      `Report generated: ${stamp}`,
-      "",
-      formatThemeSection("light", lightResult, lightResultInputs),
-      "",
-      formatThemeSection("dark", darkResult, darkResultInputs),
-      "",
-      formatObservationsSection({ state: observations, theme: approval.theme }),
-      "",
-      "---",
-      "Generated by OrchestratoR",
-    ].join("\n");
+    // One report model feeds both formats, so they always agree.
+    const report = buildAccessibilityReport({
+      componentName,
+      reviewerLabel: DEMO_REVIEWER_LABEL,
+      approval,
+      generatedAt: formatStamp(now),
+      lightResult,
+      darkResult,
+      lightResultInputs,
+      darkResultInputs,
+      currentInputsByTheme,
+      observations,
+    });
 
-    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
     const fileStamp = now.toISOString().slice(0, 16).replace(/[-:T]/g, "");
-    link.href = url;
-    link.download = `orchestrator-report-${componentName.toLowerCase()}-${fileStamp}.md`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const baseName = `orchestrator-report-${componentName.toLowerCase()}-${fileStamp}`;
+
+    if (exportFormat === "pdf") {
+      const { bytes } = renderPdf(report, { now });
+      downloadBlob(new Blob([bytes], { type: "application/pdf" }), `${baseName}.pdf`);
+    } else {
+      downloadBlob(
+        new Blob([renderMarkdown(report.blocks)], { type: "text/markdown;charset=utf-8" }),
+        `${baseName}.md`
+      );
+    }
   };
 
   const sortedFindings = useMemo(() => {
@@ -640,13 +589,40 @@ export function OrchestratorPanel({
                   <p className="doublecheck-approved-meta">
                     {THEME_LABEL[approval.theme]} · all {approval.findingTotal} evaluated findings
                   </p>
+                  <fieldset className="export-format">
+                    <legend className="export-format__legend">Export format</legend>
+                    <label className="export-format__option">
+                      <input
+                        type="radio"
+                        name="export-format"
+                        value="markdown"
+                        checked={exportFormat === "markdown"}
+                        onChange={() => setExportFormat("markdown")}
+                      />
+                      Markdown (.md)
+                    </label>
+                    <label className="export-format__option">
+                      <input
+                        type="radio"
+                        name="export-format"
+                        value="pdf"
+                        checked={exportFormat === "pdf"}
+                        onChange={() => setExportFormat("pdf")}
+                      />
+                      PDF (.pdf)
+                    </label>
+                  </fieldset>
                   <button
                     type="button"
-                    className="export-report-btn"
+                    className="doublecheck-approve-btn export-report-btn"
+                    aria-describedby="export-report-hint"
                     onClick={handleExportReport}
                   >
                     Export Accessibility Report
                   </button>
+                  <p id="export-report-hint" className="export-report-hint">
+                    Share your observations with your team.
+                  </p>
                 </div>
               ) : (
                 <>

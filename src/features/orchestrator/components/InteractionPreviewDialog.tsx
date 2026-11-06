@@ -12,7 +12,7 @@ import {
 } from "../interactionObservations";
 
 /**
- * Local interaction preview: "Button / Save changes".
+ * Local interaction preview: "Interaction preview — Button / Save changes".
  *
  * This is a SIMULATED save on a STAND-IN Button. OrchestratoR does not execute the
  * pasted component, so the button here is a plain native <button> styled with the
@@ -156,7 +156,7 @@ function DialogBody({
     <div className="interaction-dialog__inner">
       <div className="interaction-dialog__header">
         <h2 id="interaction-dialog-title" className="interaction-dialog__title">
-          Button / Save changes
+          Interaction preview — Button / Save changes
         </h2>
         <span className="interaction-dialog__badge">Simulated save</span>
       </div>
@@ -171,7 +171,28 @@ function DialogBody({
       <StandInSaveButton cssCode={effectiveCss} theme={theme} phase={phase} onActivate={activate} />
 
       <div className="interaction-dialog__sim-controls">
-        <button type="button" className="interaction-dialog__secondary-btn" onClick={reset}>
+        <button
+          type="button"
+          className="interaction-dialog__secondary-btn interaction-dialog__reset-btn"
+          onClick={reset}
+        >
+          {/* Decorative: the visible label is the accessible name. Same inline stroke-icon
+              pattern as the theme toggle (counterclockwise arrow, Feather "rotate-ccw"). */}
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+          </svg>
           Reset simulation
         </button>
       </div>
